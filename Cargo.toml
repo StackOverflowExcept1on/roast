@@ -1,0 +1,18 @@
+[package]
+name = "roastbeef"
+version = "0.1.0"
+authors = ["StackOverflowExcept1on"]
+edition = "2021"
+description = "A Schnorr signature scheme over the secp256k1 curve that supports ROAST"
+repository = "https://github.com/StackOverflowExcept1on/roastbeef"
+license = "MIT"
+keywords = ["cryptography", "crypto", "threshold", "signature"]
+categories = ["cryptography"]
+
+[dependencies]
+frost-core = "2.0.0-rc.0"
+frost-secp256k1 = "2.0.0-rc.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+rand_core = { version = "0.6", features = ["getrandom"] }
