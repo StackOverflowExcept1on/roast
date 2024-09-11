@@ -150,7 +150,7 @@ impl Coordinator {
         Ok(SessionStatus::InProgress)
     }
 
-    pub fn mark_malicious(
+    fn mark_malicious(
         &mut self,
         identifier: frost::Identifier,
         malicious_signer_error: MaliciousSignerError,
