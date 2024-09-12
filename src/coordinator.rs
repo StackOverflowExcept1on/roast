@@ -1,4 +1,4 @@
-use crate::{Error, MaliciousSignerError, Result, SignatureShareExt};
+use crate::{Error, MaliciousSignerError, Result};
 use frost_secp256k1 as frost;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -88,10 +88,24 @@ impl Coordinator {
                 );
             };
 
-            if signature_share
-                .verify2(&identifier, signing_package, &self.public_key_package)
-                .is_err()
-            {
+            let verification_result = (|| -> Result<(), frost::Error> {
+                let verifying_share = self
+                    .public_key_package
+                    .verifying_shares()
+                    .get(&identifier)
+                    .ok_or(frost::Error::UnknownIdentifier)?;
+                let verifying_key = self.public_key_package.verifying_key();
+
+                frost_core::verify_signature_share(
+                    identifier,
+                    verifying_share,
+                    &signature_share,
+                    signing_package,
+                    verifying_key,
+                )
+            })();
+
+            if verification_result.is_err() {
                 return Err(
                     self.mark_malicious(identifier, MaliciousSignerError::InvalidSignatureShare)
                 );

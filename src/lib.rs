@@ -1,12 +1,10 @@
 pub use coordinator::*;
 pub use error::*;
 pub use participant::*;
-pub(crate) use verification::*;
 
 mod coordinator;
 mod error;
 mod participant;
-mod verification;
 
 #[cfg(test)]
 mod tests {

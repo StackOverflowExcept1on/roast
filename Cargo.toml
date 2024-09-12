@@ -10,8 +10,8 @@ keywords = ["cryptography", "crypto", "threshold", "signature"]
 categories = ["cryptography"]
 
 [dependencies]
-frost-core = "2.0.0-rc.0"
-frost-secp256k1 = "2.0.0-rc.0"
+frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share" }
+frost-secp256k1 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share" }
 thiserror = "1.0"
 
 [dev-dependencies]
