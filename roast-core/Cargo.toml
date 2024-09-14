@@ -4,21 +4,31 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
+readme.workspace = true
 repository.workspace = true
 license.workspace = true
 keywords = ["cryptography", "crypto", "threshold", "signature", "schnorr"]
 categories.workspace = true
 
 [dependencies]
-frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", features = ["internals"], default-features = false }
-rand_core = { version = "0.6", default-features = false }
-thiserror-nostd-notrait = { version = "1.0", default-features = false }
-thiserror = { version = "1.0", default-features = false, optional = true }
+document-features.workspace = true
+frost-core.workspace = true
+rand_core.workspace = true
+thiserror-nostd-notrait.workspace = true
+thiserror = { workspace = true, optional = true }
 
 [features]
 default = ["serialization", "cheater-detection", "std"]
+#! ## Features
+## Enable standard library support.
 std = ["dep:thiserror"]
+## Enable `serde` support for types that need to be communicated. You
+## can use `serde` to serialize structs with any encoder that supports
+## `serde` (e.g. JSON with `serde_json`).
 serde = ["frost-core/serde"]
+## Enable a default serialization format. Enables `serde`.
 serialization = ["frost-core/serialization"]
-# TODO: test-impl = []
+## Exposes ciphersuite-generic tests for other crates to use.
+test-impl = []
+## Enable cheater detection.
 cheater-detection = ["frost-core/cheater-detection"]

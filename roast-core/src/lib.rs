@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // TODO #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+#![doc = document_features::document_features!()]
 
 extern crate alloc;
 
