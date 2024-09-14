@@ -1,0 +1,24 @@
+[package]
+name = "roast-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
+repository.workspace = true
+license.workspace = true
+keywords = ["cryptography", "crypto", "threshold", "signature", "schnorr"]
+categories.workspace = true
+
+[dependencies]
+frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", features = ["internals"], default-features = false }
+rand_core = { version = "0.6", default-features = false }
+thiserror-nostd-notrait = { version = "1.0", default-features = false }
+thiserror = { version = "1.0", default-features = false, optional = true }
+
+[features]
+default = ["serialization", "cheater-detection", "std"]
+std = ["dep:thiserror"]
+serde = ["frost-core/serde"]
+serialization = ["frost-core/serialization"]
+# TODO: test-impl = []
+cheater-detection = ["frost-core/cheater-detection"]
