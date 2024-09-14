@@ -1,11 +1,9 @@
-use crate::{
-    frost_core::{
-        keys::KeyPackage,
-        round1::{self, SigningCommitments, SigningNonces},
-        round2::{self, SignatureShare},
-        Ciphersuite, SigningPackage,
-    },
-    Error,
+use crate::Error;
+use frost_core::{
+    keys::KeyPackage,
+    round1::{self, SigningCommitments, SigningNonces},
+    round2::{self, SignatureShare},
+    Ciphersuite, SigningPackage,
 };
 use rand_core::{CryptoRng, RngCore};
 

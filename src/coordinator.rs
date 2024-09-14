@@ -1,15 +1,13 @@
-use crate::{
-    frost_core::{
-        self, keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare,
-        Ciphersuite, Error as FrostError, Identifier, Signature, SigningPackage,
-    },
-    Error, MaliciousSignerError,
-};
+use crate::{Error, MaliciousSignerError};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
 };
 use core::mem;
+use frost_core::{
+    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
+    Error as FrostError, Identifier, Signature, SigningPackage,
+};
 
 type SessionId = u16;
 

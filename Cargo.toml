@@ -3,7 +3,7 @@ name = "roastbeef"
 version = "0.1.0"
 authors = ["StackOverflowExcept1on"]
 edition = "2021"
-description = "A Schnorr signature scheme over the secp256k1 curve that supports ROAST"
+description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
 repository = "https://github.com/StackOverflowExcept1on/roastbeef"
 license = "MIT"
 keywords = ["cryptography", "crypto", "threshold", "signature"]
@@ -16,4 +16,9 @@ thiserror-nostd-notrait = { version = "1.0", default-features = false }
 thiserror = { version = "1.0", default-features = false, optional = true }
 
 [features]
+default = ["serialization", "cheater-detection", "std"]
 std = ["dep:thiserror"]
+serde = ["frost-core/serde"]
+serialization = ["frost-core/serialization"]
+# TODO: test-impl = []
+cheater-detection = ["frost-core/cheater-detection"]
