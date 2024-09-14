@@ -1,5 +1,10 @@
-use frost_secp256k1::{self as frost, rand_core::OsRng};
-use roastbeef::{Coordinator, Participant, Result, SessionStatus};
+use roastbeef::{
+    frost::{
+        keys::{self, IdentifierList, KeyPackage},
+        rand_core::OsRng,
+    },
+    Coordinator, Result, SessionStatus, Signer,
+};
 use std::collections::BTreeMap;
 
 #[test]
@@ -7,31 +12,27 @@ fn test_basic() -> Result<()> {
     let mut rng = OsRng;
     let max_signers = 3;
     let min_signers = 2;
-    let (secret_shares, public_key_package) = frost::keys::generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        rng,
-    )?;
+    let (secret_shares, public_key_package) =
+        keys::generate_with_dealer(max_signers, min_signers, IdentifierList::Default, rng)?;
 
     let mut coordinator = Coordinator::new(
         max_signers,
         min_signers,
         public_key_package,
         b"message to sign".into(),
-    );
-    let mut participants: BTreeMap<_, _> = BTreeMap::new();
+    )?;
+    let mut signers: BTreeMap<_, _> = BTreeMap::new();
 
     for (identifier, secret_share) in secret_shares {
-        let key_package = frost::keys::KeyPackage::try_from(secret_share)?;
-        participants.insert(identifier, Participant::new(key_package, &mut rng));
+        let key_package = KeyPackage::try_from(secret_share)?;
+        signers.insert(identifier, Signer::new(key_package, &mut rng));
     }
 
     let mut session_statuses1 = Vec::new();
     for index in 1..=min_signers {
         let identifier = index.try_into()?;
-        let participant = participants.get(&identifier).unwrap();
-        let response = coordinator.receive(identifier, None, participant.signing_commitments())?;
+        let signer = signers.get(&identifier).unwrap();
+        let response = coordinator.receive(identifier, None, signer.signing_commitments())?;
         session_statuses1.push(response);
     }
 
@@ -48,12 +49,12 @@ fn test_basic() -> Result<()> {
     {
         for index in 1..=min_signers {
             let identifier = index.try_into()?;
-            let participant = participants.get_mut(&identifier).unwrap();
-            let signature_share = participant.receive(signing_package, &mut rng)?;
+            let signer = signers.get_mut(&identifier).unwrap();
+            let signature_share = signer.receive(signing_package, &mut rng)?;
             let response = coordinator.receive(
                 identifier,
                 Some(signature_share),
-                participant.signing_commitments(),
+                signer.signing_commitments(),
             )?;
             session_statuses2.push(response);
         }
