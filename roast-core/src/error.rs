@@ -1,8 +1,6 @@
 use frost_core::{Ciphersuite, Error as FrostError};
-
 #[cfg(feature = "std")]
 use thiserror::Error;
-
 #[cfg(not(feature = "std"))]
 use thiserror_nostd_notrait::Error;
 
