@@ -1,9 +1,9 @@
 use crate::{
-    frost::{
+    frost_core::{
         self, keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare,
-        Error as FrostError, Identifier, Signature, SigningPackage,
+        Ciphersuite, Error as FrostError, Identifier, Signature, SigningPackage,
     },
-    Error, MaliciousSignerError, Result,
+    Error, MaliciousSignerError,
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
@@ -14,44 +14,44 @@ use core::mem;
 type SessionId = u16;
 
 #[derive(Debug)]
-struct Session {
-    signing_package: SigningPackage,
-    signature_shares: BTreeMap<Identifier, SignatureShare>,
+struct Session<C: Ciphersuite> {
+    signing_package: SigningPackage<C>,
+    signature_shares: BTreeMap<Identifier<C>, SignatureShare<C>>,
 }
 
 #[derive(Debug)]
-pub enum SessionStatus {
+pub enum SessionStatus<C: Ciphersuite> {
     InProgress,
     Started {
-        signers: BTreeSet<Identifier>,
-        signing_package: SigningPackage,
+        signers: BTreeSet<Identifier<C>>,
+        signing_package: SigningPackage<C>,
     },
     Finished {
-        signature: Signature,
+        signature: Signature<C>,
     },
 }
 
 #[derive(Debug)]
-pub struct Coordinator {
+pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
-    public_key_package: PublicKeyPackage,
+    public_key_package: PublicKeyPackage<C>,
     message: Vec<u8>,
-    responsive_signers: BTreeSet<Identifier>,
-    malicious_signers: BTreeMap<Identifier, MaliciousSignerError>,
-    latest_signing_commitments: BTreeMap<Identifier, SigningCommitments>,
+    responsive_signers: BTreeSet<Identifier<C>>,
+    malicious_signers: BTreeMap<Identifier<C>, MaliciousSignerError>,
+    latest_signing_commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
     session_counter: SessionId,
-    signer_session: BTreeMap<Identifier, SessionId>,
-    session: BTreeMap<SessionId, Session>,
+    signer_session: BTreeMap<Identifier<C>, SessionId>,
+    session: BTreeMap<SessionId, Session<C>>,
 }
 
-impl Coordinator {
+impl<C: Ciphersuite> Coordinator<C> {
     pub fn new(
         max_signers: u16,
         min_signers: u16,
-        public_key_package: PublicKeyPackage,
+        public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error<C>> {
         if min_signers < 2 {
             return Err(Error::Frost(FrostError::InvalidMinSigners));
         }
@@ -80,10 +80,10 @@ impl Coordinator {
 
     pub fn receive(
         &mut self,
-        identifier: Identifier,
-        signature_share: Option<SignatureShare>,
-        signing_commitments: SigningCommitments,
-    ) -> Result<SessionStatus> {
+        identifier: Identifier<C>,
+        signature_share: Option<SignatureShare<C>>,
+        signing_commitments: SigningCommitments<C>,
+    ) -> Result<SessionStatus<C>, Error<C>> {
         if let Some(err) = self.malicious_signers.get(&identifier).cloned() {
             return Err(Error::MaliciousSigner(err));
         }
@@ -106,7 +106,7 @@ impl Coordinator {
                 );
             };
 
-            let verification_result = (|| -> Result<(), FrostError> {
+            let verification_result = (|| -> Result<(), FrostError<C>> {
                 let verifying_share = self
                     .public_key_package
                     .verifying_shares()
@@ -132,8 +132,11 @@ impl Coordinator {
             signature_shares.insert(identifier, signature_share);
 
             if signature_shares.len() == self.min_signers as usize {
-                let signature =
-                    frost::aggregate(signing_package, signature_shares, &self.public_key_package)?;
+                let signature = frost_core::aggregate(
+                    signing_package,
+                    signature_shares,
+                    &self.public_key_package,
+                )?;
                 return Ok(SessionStatus::Finished { signature });
             }
         }
@@ -183,9 +186,9 @@ impl Coordinator {
 
     fn mark_malicious(
         &mut self,
-        identifier: Identifier,
+        identifier: Identifier<C>,
         malicious_signer_error: MaliciousSignerError,
-    ) -> Error {
+    ) -> Error<C> {
         self.malicious_signers
             .insert(identifier, malicious_signer_error.clone());
 

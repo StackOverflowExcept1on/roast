@@ -7,7 +7,7 @@ mod coordinator;
 mod error;
 mod signer;
 
-pub use frost_secp256k1 as frost;
+pub use frost_core;
 
 pub use coordinator::*;
 pub use error::*;

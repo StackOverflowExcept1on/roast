@@ -10,13 +10,10 @@ keywords = ["cryptography", "crypto", "threshold", "signature"]
 categories = ["cryptography"]
 
 [dependencies]
-frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
-frost-secp256k1 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
+frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", features = ["internals"], default-features = false }
+rand_core = { version = "0.6", default-features = false }
 thiserror-nostd-notrait = { version = "1.0", default-features = false }
 thiserror = { version = "1.0", default-features = false, optional = true }
-
-[dev-dependencies]
-rand_core = { version = "0.6", features = ["getrandom"], default-features = false }
 
 [features]
 std = ["dep:thiserror"]

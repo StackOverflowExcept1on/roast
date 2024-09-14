@@ -1,11 +1,8 @@
-use crate::frost::Error as FrostError;
+use crate::frost_core::{Ciphersuite, Error as FrostError};
 #[cfg(feature = "std")]
 use thiserror::Error;
 #[cfg(not(feature = "std"))]
 use thiserror_nostd_notrait::Error;
-
-/// Alias for a `Result` with the error type `roastbeef::Error`.
-pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// This type represents all possible errors for which a signer can be marked as
 /// malicious.
@@ -21,10 +18,10 @@ pub enum MaliciousSignerError {
 
 /// This type represents all possible errors that can occur in ROAST protocol.
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum Error<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
-    Frost(#[from] FrostError),
+    Frost(#[from] FrostError<C>),
     /// Malicious signer.
     #[error("Malicious signer: {0}")]
     MaliciousSigner(#[from] MaliciousSignerError),
