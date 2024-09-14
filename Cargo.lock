@@ -117,9 +117,9 @@ dependencies = [
 
 [[package]]
 name = "derive-getters"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a6433aac097572ea8ccc60b3f2e756c661c9aeed9225cdd4d0cb119cb7ff6ba"
+checksum = "74ef43543e701c01ad77d3a5922755c6a1d71b22d942cb8042be4994b380caff"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -194,8 +194,7 @@ dependencies = [
 [[package]]
 name = "frost-core"
 version = "2.0.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed1383227a6606aacf5df9a17ff57824c6971a0ab225b69b911bec0ba7bbb869"
+source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
 dependencies = [
  "byteorder",
  "const-crc32-nostd",
@@ -217,8 +216,7 @@ dependencies = [
 [[package]]
 name = "frost-rerandomized"
 version = "2.0.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdb14a6054f9ce5aa4912c60c11392d42c43acec8295ee1df1f67a9d0b7a73ee"
+source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
 dependencies = [
  "derive-getters",
  "document-features",
@@ -230,8 +228,7 @@ dependencies = [
 [[package]]
 name = "frost-secp256k1"
 version = "2.0.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090a3873c55aca5dfb40e7ee1c91cd15db5bad7c88bc80570417db31436c9db0"
+source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
 dependencies = [
  "document-features",
  "frost-core",
