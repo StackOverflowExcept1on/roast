@@ -1,71 +1,111 @@
-use crate::{Error, MaliciousSignerError, Result};
-use frost_secp256k1 as frost;
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    mem,
+use crate::{Error, MaliciousSignerError};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
+use core::mem;
+use frost_core::{
+    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
+    Error as FrostError, Identifier, Signature, SigningPackage,
 };
 
 type SessionId = u16;
 
 #[derive(Debug)]
-struct Session {
-    signing_package: frost::SigningPackage,
-    signature_shares: BTreeMap<frost::Identifier, frost::round2::SignatureShare>,
+struct Session<C: Ciphersuite> {
+    signing_package: SigningPackage<C>,
+    signature_shares: BTreeMap<Identifier<C>, SignatureShare<C>>,
 }
 
+/// Represents all possible session statuses.
 #[derive(Debug)]
-pub enum SessionStatus {
+pub enum SessionStatus<C: Ciphersuite> {
+    /// Session still in progress.
     InProgress,
+    /// Session started with `signers` and `signing_package`.
     Started {
-        signers: HashSet<frost::Identifier>,
-        signing_package: frost::SigningPackage,
+        /// Set of signers with which session started.
+        signers: BTreeSet<Identifier<C>>,
+        /// Signing package (includes [`SigningCommitments`] from all signers
+        /// and message to sign).
+        signing_package: SigningPackage<C>,
     },
+    /// Session finished.
     Finished {
-        signature: frost::Signature,
+        /// Final signature.
+        signature: Signature<C>,
     },
 }
 
+/// Represents coordinator.
 #[derive(Debug)]
-pub struct Coordinator {
+pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
-    public_key_package: frost::keys::PublicKeyPackage,
+    public_key_package: PublicKeyPackage<C>,
     message: Vec<u8>,
-    responsive_signers: HashSet<frost::Identifier>,
-    malicious_signers: HashMap<frost::Identifier, MaliciousSignerError>,
-    latest_signing_commitments: HashMap<frost::Identifier, frost::round1::SigningCommitments>,
+    responsive_signers: BTreeSet<Identifier<C>>,
+    malicious_signers: BTreeMap<Identifier<C>, MaliciousSignerError>,
+    latest_signing_commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
     session_counter: SessionId,
-    signer_session: HashMap<frost::Identifier, SessionId>,
-    session: HashMap<SessionId, Session>,
+    signer_session: BTreeMap<Identifier<C>, SessionId>,
+    session: BTreeMap<SessionId, Session<C>>,
 }
 
-impl Coordinator {
+impl<C: Ciphersuite> Coordinator<C> {
+    /// Creates a new [`Coordinator`].
     pub fn new(
         max_signers: u16,
         min_signers: u16,
-        public_key_package: frost::keys::PublicKeyPackage,
+        public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Error<C>> {
+        if min_signers < 2 {
+            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        }
+
+        if max_signers < 2 {
+            return Err(Error::Frost(FrostError::InvalidMaxSigners));
+        }
+
+        if min_signers > max_signers {
+            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        }
+
+        Ok(Self {
             max_signers,
             min_signers,
             public_key_package,
             message,
-            responsive_signers: HashSet::new(),
-            malicious_signers: HashMap::new(),
-            latest_signing_commitments: HashMap::new(),
+            responsive_signers: BTreeSet::new(),
+            malicious_signers: BTreeMap::new(),
+            latest_signing_commitments: BTreeMap::new(),
             session_counter: 0,
-            signer_session: HashMap::new(),
-            session: HashMap::new(),
-        }
+            signer_session: BTreeMap::new(),
+            session: BTreeMap::new(),
+        })
     }
 
+    /// Receives the [`Identifier`], [`Option<SignatureShare<C>>`] and
+    /// [`SigningCommitments`] from the signer.
+    ///
+    /// Returns [`SessionStatus`] if successful. Transitions between session
+    /// states occur as follows:
+    /// - The coordinator receives threshold number of [`SigningCommitments`]
+    ///   and then session goes to state [`SessionStatus::Started`]. All signers
+    ///   who participated in the session receive [`SigningPackage`].
+    /// - The coordinator then receives threshold number [`SignatureShare`] and
+    ///   aggregates them into a final signature, and session goes to state
+    ///   [`SessionStatus::Finished`].
+    /// - If the coordinator has not yet received threshold number of
+    ///   [`SigningCommitments`] or [`SignatureShare`], session goes to state
+    ///   [`SessionStatus::InProgress`].
     pub fn receive(
         &mut self,
-        identifier: frost::Identifier,
-        signature_share: Option<frost::round2::SignatureShare>,
-        signing_commitments: frost::round1::SigningCommitments,
-    ) -> Result<SessionStatus> {
+        identifier: Identifier<C>,
+        signature_share: Option<SignatureShare<C>>,
+        signing_commitments: SigningCommitments<C>,
+    ) -> Result<SessionStatus<C>, Error<C>> {
         if let Some(err) = self.malicious_signers.get(&identifier).cloned() {
             return Err(Error::MaliciousSigner(err));
         }
@@ -88,12 +128,12 @@ impl Coordinator {
                 );
             };
 
-            let verification_result = (|| -> Result<(), frost::Error> {
+            let verification_result = (|| -> Result<(), FrostError<C>> {
                 let verifying_share = self
                     .public_key_package
                     .verifying_shares()
                     .get(&identifier)
-                    .ok_or(frost::Error::UnknownIdentifier)?;
+                    .ok_or(FrostError::UnknownIdentifier)?;
                 let verifying_key = self.public_key_package.verifying_key();
 
                 frost_core::verify_signature_share(
@@ -114,8 +154,11 @@ impl Coordinator {
             signature_shares.insert(identifier, signature_share);
 
             if signature_shares.len() == self.min_signers as usize {
-                let signature =
-                    frost::aggregate(signing_package, signature_shares, &self.public_key_package)?;
+                let signature = frost_core::aggregate(
+                    signing_package,
+                    signature_shares,
+                    &self.public_key_package,
+                )?;
                 return Ok(SessionStatus::Finished { signature });
             }
         }
@@ -139,8 +182,7 @@ impl Coordinator {
                         .map(|signing_commitments| (identifier, signing_commitments))
                 })
                 .collect();
-            let signing_package =
-                frost::SigningPackage::new(signing_commitments, self.message.as_ref());
+            let signing_package = SigningPackage::new(signing_commitments, self.message.as_ref());
 
             for identifier in self.responsive_signers.iter().cloned() {
                 self.signer_session.insert(identifier, session_id);
@@ -166,9 +208,9 @@ impl Coordinator {
 
     fn mark_malicious(
         &mut self,
-        identifier: frost::Identifier,
+        identifier: Identifier<C>,
         malicious_signer_error: MaliciousSignerError,
-    ) -> Error {
+    ) -> Error<C> {
         self.malicious_signers
             .insert(identifier, malicious_signer_error.clone());
 
