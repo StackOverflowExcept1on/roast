@@ -89,17 +89,17 @@ impl<C: Ciphersuite> Coordinator<C> {
     /// Receives the [`Identifier`], [`Option<SignatureShare<C>>`] and
     /// [`SigningCommitments`] from the signer.
     ///
-    /// The coordinator receives threshold number of [`SigningCommitments`] and
-    /// then session goes to state [`SessionStatus::Started`]. All signers who
-    /// participated in the session receive [`SigningPackage`].
-    ///
-    /// The coordinator then receives threshold number [`SignatureShare`] and
-    /// aggregates them into a final signature, and session goes to state
-    /// [`SessionStatus::Finished`].
-    ///
-    /// If the coordinator has not yet received threshold number of
-    /// [`SigningCommitments`] or [`SignatureShare`], session goes to state
-    /// [`SessionStatus::InProgress`].
+    /// Returns [`SessionStatus`] if successful. Transitions between session
+    /// states occur as follows:
+    /// - The coordinator receives threshold number of [`SigningCommitments`]
+    ///   and then session goes to state [`SessionStatus::Started`]. All signers
+    ///   who participated in the session receive [`SigningPackage`].
+    /// - The coordinator then receives threshold number [`SignatureShare`] and
+    ///   aggregates them into a final signature, and session goes to state
+    ///   [`SessionStatus::Finished`].
+    /// - If the coordinator has not yet received threshold number of
+    ///   [`SigningCommitments`] or [`SignatureShare`], session goes to state
+    ///   [`SessionStatus::InProgress`].
     pub fn receive(
         &mut self,
         identifier: Identifier<C>,
