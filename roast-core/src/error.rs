@@ -4,8 +4,7 @@ use thiserror::Error;
 #[cfg(not(feature = "std"))]
 use thiserror_nostd_notrait::Error;
 
-/// This type represents all possible errors for which a signer can be marked as
-/// malicious.
+/// Represents all possible errors for which signer can be marked as malicious.
 #[derive(Error, Debug, Clone)]
 pub enum MaliciousSignerError {
     /// Signer unsolicitedly replied to coordinator.
@@ -16,7 +15,7 @@ pub enum MaliciousSignerError {
     InvalidSignatureShare,
 }
 
-/// This type represents all possible errors that can occur in ROAST protocol.
+/// Represents all possible errors that can occur.
 #[derive(Error, Debug)]
 pub enum Error<C: Ciphersuite> {
     /// Error in FROST protocol.

@@ -7,7 +7,7 @@ use frost_core::{
 };
 use rand_core::{CryptoRng, RngCore};
 
-/// Represents signer of ROAST protocol.
+/// Represents signer.
 #[derive(Debug)]
 pub struct Signer<C: Ciphersuite> {
     key_package: KeyPackage<C>,
@@ -15,7 +15,8 @@ pub struct Signer<C: Ciphersuite> {
 }
 
 impl<C: Ciphersuite> Signer<C> {
-    /// Creates a new [`Signer`] and generates [`SigningNonces`] for the first round of FROST.
+    /// Creates a new [`Signer`] and generates [`SigningNonces`] for the first
+    /// round of FROST.
     pub fn new<RNG: RngCore + CryptoRng>(key_package: KeyPackage<C>, rng: &mut RNG) -> Self {
         let (signing_nonces, _) = round1::commit(key_package.signing_share(), rng);
         Self {

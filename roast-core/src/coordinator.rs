@@ -17,18 +17,27 @@ struct Session<C: Ciphersuite> {
     signature_shares: BTreeMap<Identifier<C>, SignatureShare<C>>,
 }
 
+/// Represents all possible session statuses.
 #[derive(Debug)]
 pub enum SessionStatus<C: Ciphersuite> {
+    /// Session still in progress.
     InProgress,
+    /// Session started with `signers` and `signing_package`.
     Started {
+        /// Set of signers with which session started.
         signers: BTreeSet<Identifier<C>>,
+        /// Signing package (includes [`SigningCommitments`] from all signers
+        /// and message to sign).
         signing_package: SigningPackage<C>,
     },
+    /// Session finished.
     Finished {
+        /// Final signature.
         signature: Signature<C>,
     },
 }
 
+/// Represents coordinator.
 #[derive(Debug)]
 pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
@@ -44,6 +53,7 @@ pub struct Coordinator<C: Ciphersuite> {
 }
 
 impl<C: Ciphersuite> Coordinator<C> {
+    /// Creates a new [`Coordinator`].
     pub fn new(
         max_signers: u16,
         min_signers: u16,
@@ -76,6 +86,20 @@ impl<C: Ciphersuite> Coordinator<C> {
         })
     }
 
+    /// Receives the [`Identifier`], [`Option<SignatureShare<C>>`] and
+    /// [`SigningCommitments`] from the signer.
+    ///
+    /// The coordinator receives threshold number of [`SigningCommitments`] and
+    /// then session goes to state [`SessionStatus::Started`]. All signers who
+    /// participated in the session receive [`SigningPackage`].
+    ///
+    /// The coordinator then receives threshold number [`SignatureShare`] and
+    /// aggregates them into a final signature, and session goes to state
+    /// [`SessionStatus::Finished`].
+    ///
+    /// If the coordinator has not yet received threshold number of
+    /// [`SigningCommitments`] or [`SignatureShare`], session goes to state
+    /// [`SessionStatus::InProgress`].
     pub fn receive(
         &mut self,
         identifier: Identifier<C>,
