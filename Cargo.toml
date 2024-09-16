@@ -2,6 +2,11 @@
 resolver = "2"
 members = [
     "roast-core",
+    "roast-ed25519",
+    "roast-ed448",
+    "roast-p256",
+    "roast-ristretto255",
+    "roast-secp256k1",
 ]
 
 [workspace.package]
@@ -9,13 +14,25 @@ version = "0.1.0"
 authors = ["StackOverflowExcept1on"]
 edition = "2021"
 readme = "README.md"
-repository = "https://github.com/StackOverflowExcept1on/roastbeef"
+repository = "https://github.com/StackOverflowExcept1on/roast"
 license = "MIT"
 categories = ["cryptography"]
 
 [workspace.dependencies]
 document-features = "0.2"
 frost-core = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", features = ["internals"], default-features = false }
+frost-ed25519 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
+frost-ed448 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
+frost-p256 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
+frost-ristretto255 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
+frost-secp256k1 = { git = "https://github.com/ZcashFoundation/frost", branch = "expose-verify-signature-share", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 thiserror-nostd-notrait = { version = "1.0", default-features = false }
 thiserror = { version = "1.0", default-features = false }
+
+roast-core = { path = "roast-core", default-features = false }
+roast-ed25519 = { path = "roast-ed25519", default-features = false }
+roast-ed448 = { path = "roast-ed448", default-features = false }
+roast-p256 = { path = "roast-p256", default-features = false }
+roast-ristretto255 = { path = "roast-ristretto255", default-features = false }
+roast-secp256k1 = { path = "roast-secp256k1", default-features = false }

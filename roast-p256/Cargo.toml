@@ -1,34 +1,30 @@
 [package]
-name = "roast-core"
+name = "roast-p256"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
+description = "A Schnorr signature scheme over the NIST P-256 curve that supports ROAST"
 readme.workspace = true
 repository.workspace = true
 license.workspace = true
-keywords = ["cryptography", "crypto", "schnorr", "threshold", "signature"]
+keywords = ["cryptography", "crypto", "p256", "threshold", "signature"]
 categories.workspace = true
 
 [dependencies]
 document-features.workspace = true
-frost-core.workspace = true
-rand_core.workspace = true
-thiserror-nostd-notrait.workspace = true
-thiserror = { workspace = true, optional = true }
+frost-p256.workspace = true
+roast-core.workspace = true
 
 [features]
 default = ["serialization", "cheater-detection", "std"]
 #! ## Features
 ## Enable standard library support.
-std = ["dep:thiserror"]
+std = ["roast-core/std"]
 ## Enable `serde` support for types that need to be communicated. You
 ## can use `serde` to serialize structs with any encoder that supports
 ## `serde` (e.g. JSON with `serde_json`).
-serde = ["frost-core/serde"]
+serde = ["roast-core/serde"]
 ## Enable a default serialization format. Enables `serde`.
-serialization = ["frost-core/serialization"]
-## Exposes ciphersuite-generic tests for other crates to use.
-test-impl = []
+serialization = ["roast-core/serialization"]
 ## Enable cheater detection.
-cheater-detection = ["frost-core/cheater-detection"]
+cheater-detection = ["roast-core/cheater-detection"]
