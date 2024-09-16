@@ -9,7 +9,7 @@ mod coordinator;
 mod error;
 mod signer;
 
-pub use frost_core;
+pub use frost_core as frost;
 
 pub use coordinator::*;
 pub use error::*;
