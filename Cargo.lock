@@ -352,6 +352,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "getrandom"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi",
+]
+
+[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -496,6 +507,9 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "roast-core"
@@ -514,6 +528,7 @@ version = "0.1.0"
 dependencies = [
  "document-features",
  "frost-ed25519",
+ "rand_core",
  "roast-core",
 ]
 
@@ -523,6 +538,7 @@ version = "0.1.0"
 dependencies = [
  "document-features",
  "frost-ed448",
+ "rand_core",
  "roast-core",
 ]
 
@@ -532,6 +548,7 @@ version = "0.1.0"
 dependencies = [
  "document-features",
  "frost-p256",
+ "rand_core",
  "roast-core",
 ]
 
@@ -541,6 +558,7 @@ version = "0.1.0"
 dependencies = [
  "document-features",
  "frost-ristretto255",
+ "rand_core",
  "roast-core",
 ]
 
@@ -550,6 +568,7 @@ version = "0.1.0"
 dependencies = [
  "document-features",
  "frost-secp256k1",
+ "rand_core",
  "roast-core",
 ]
 
@@ -738,6 +757,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "wasi"
+version = "0.11.0+wasi-snapshot-preview1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "zeroize"

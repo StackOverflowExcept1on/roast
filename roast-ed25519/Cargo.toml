@@ -15,6 +15,10 @@ document-features.workspace = true
 frost-ed25519.workspace = true
 roast-core.workspace = true
 
+[dev-dependencies]
+roast-core = { workspace = true, features = ["test-impl"] }
+rand_core = { workspace = true, features = ["getrandom"] }
+
 [features]
 default = ["serialization", "cheater-detection", "std"]
 #! ## Features

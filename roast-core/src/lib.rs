@@ -9,6 +9,9 @@ mod coordinator;
 mod error;
 mod signer;
 
+#[cfg(any(test, feature = "test-impl"))]
+pub mod tests;
+
 pub use frost_core as frost;
 
 pub use coordinator::*;
