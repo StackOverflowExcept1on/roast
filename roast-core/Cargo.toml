@@ -13,6 +13,7 @@ categories.workspace = true
 [dependencies]
 document-features.workspace = true
 frost-core.workspace = true
+rand = { workspace = true, optional = true }
 rand_core.workspace = true
 thiserror-nostd-notrait.workspace = true
 thiserror = { workspace = true, optional = true }
@@ -29,6 +30,6 @@ serde = ["frost-core/serde"]
 ## Enable a default serialization format. Enables `serde`.
 serialization = ["frost-core/serialization"]
 ## Exposes ciphersuite-generic tests for other crates to use.
-test-impl = []
+test-impl = ["dep:rand"]
 ## Enable cheater detection.
 cheater-detection = ["frost-core/cheater-detection"]

@@ -206,6 +206,11 @@ impl<C: Ciphersuite> Coordinator<C> {
         Ok(SessionStatus::InProgress)
     }
 
+    /// Marks the signer as malicious with the given [`MaliciousSignerError`]
+    /// and returns this error as [`Error::MaliciousSigner`].
+    ///
+    /// If the number of malicious signers exceeds the threshold, returns
+    /// [`Error::TooManyMaliciousSigners`].
     fn mark_malicious(
         &mut self,
         identifier: Identifier<C>,

@@ -3,6 +3,7 @@
 #![doc = include_str!("../README.md")]
 #![doc = document_features::document_features!()]
 
+#[macro_use]
 extern crate alloc;
 
 mod coordinator;

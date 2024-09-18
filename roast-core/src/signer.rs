@@ -25,6 +25,13 @@ impl<C: Ciphersuite> Signer<C> {
         }
     }
 
+    /// Regenerates [`SigningNonces`] for the first round of FROST. The caller
+    /// should take care to send the coordinator a new [`SigningCommitments`].
+    pub(crate) fn regenerate_signing_nonces<RNG: RngCore + CryptoRng>(&mut self, rng: &mut RNG) {
+        let (signing_nonces, _) = round1::commit(self.key_package.signing_share(), rng);
+        self.signing_nonces = signing_nonces;
+    }
+
     /// Returns the [`SigningCommitments`], i.e. the public part of
     /// [`SigningNonces`] that is used for the first round of FROST.
     pub fn signing_commitments(&self) -> SigningCommitments<C> {
@@ -44,10 +51,7 @@ impl<C: Ciphersuite> Signer<C> {
     ) -> Result<SignatureShare<C>, Error<C>> {
         let signature_share =
             round2::sign(signing_package, &self.signing_nonces, &self.key_package)?;
-
-        let (signing_nonces, _) = round1::commit(self.key_package.signing_share(), rng);
-        self.signing_nonces = signing_nonces;
-
+        self.regenerate_signing_nonces(rng);
         Ok(signature_share)
     }
 }
