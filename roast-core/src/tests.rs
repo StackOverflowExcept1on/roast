@@ -8,8 +8,7 @@ use crate::{
     Coordinator, Error, SessionStatus, Signer,
 };
 use alloc::collections::BTreeMap;
-use frost_core::round2::SignatureShare;
-use frost_core::{Field, Group};
+use frost_core::{round2::SignatureShare, Field, Group};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
 /// Runs ROAST algorithm with `min_signers`/`max_signers` multi-signature and no

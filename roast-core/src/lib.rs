@@ -3,7 +3,7 @@
 #![doc = include_str!("../README.md")]
 #![doc = document_features::document_features!()]
 
-#[macro_use]
+#[cfg_attr(any(test, feature = "test-impl"), macro_use)]
 extern crate alloc;
 
 mod coordinator;

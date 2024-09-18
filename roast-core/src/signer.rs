@@ -52,6 +52,7 @@ impl<C: Ciphersuite> Signer<C> {
         let signature_share =
             round2::sign(signing_package, &self.signing_nonces, &self.key_package)?;
         self.regenerate_signing_nonces(rng);
+
         Ok(signature_share)
     }
 }
