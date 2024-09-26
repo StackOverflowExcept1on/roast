@@ -106,7 +106,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         signature_share: Option<SignatureShare<C>>,
         signing_commitments: SigningCommitments<C>,
     ) -> Result<SessionStatus<C>, Error<C>> {
-        if let Some(err) = self.malicious_signers.get(&identifier).cloned() {
+        if let Some(err) = self.malicious_signers.get(&identifier).copied() {
             return Err(Error::MaliciousSigner(err));
         }
 
@@ -174,17 +174,17 @@ impl<C: Ciphersuite> Coordinator<C> {
             let signing_commitments: BTreeMap<_, _> = self
                 .responsive_signers
                 .iter()
-                .cloned()
+                .copied()
                 .filter_map(|identifier| {
                     self.latest_signing_commitments
                         .get(&identifier)
-                        .cloned()
+                        .copied()
                         .map(|signing_commitments| (identifier, signing_commitments))
                 })
                 .collect();
             let signing_package = SigningPackage::new(signing_commitments, self.message.as_ref());
 
-            for identifier in self.responsive_signers.iter().cloned() {
+            for identifier in self.responsive_signers.iter().copied() {
                 self.signer_session.insert(identifier, session_id);
             }
 
@@ -217,7 +217,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         malicious_signer_error: MaliciousSignerError,
     ) -> Error<C> {
         self.malicious_signers
-            .insert(identifier, malicious_signer_error.clone());
+            .insert(identifier, malicious_signer_error);
 
         if self.malicious_signers.len() > (self.max_signers - self.min_signers) as usize {
             return Error::TooManyMaliciousSigners;
