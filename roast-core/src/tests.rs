@@ -55,7 +55,7 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     let mut session_counter = 0;
 
     'outer: loop {
-        'inner: for (index, is_malicious) in (1..=max_signers).zip(malicious_mask.iter().cloned()) {
+        'inner: for (index, is_malicious) in (1..=max_signers).zip(malicious_mask.iter().copied()) {
             let identifier = index.try_into()?;
             let signer = signers.get_mut(&identifier).unwrap();
             let signature_share = signing_packages

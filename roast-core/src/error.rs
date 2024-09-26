@@ -5,7 +5,7 @@ use thiserror::Error;
 use thiserror_nostd_notrait::Error;
 
 /// Represents all possible errors for which signer can be marked as malicious.
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum MaliciousSignerError {
     /// Signer unsolicitedly replied to coordinator.
     #[error("Unsolicited reply")]
@@ -16,7 +16,7 @@ pub enum MaliciousSignerError {
 }
 
 /// Represents all possible errors that can occur.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Error<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
