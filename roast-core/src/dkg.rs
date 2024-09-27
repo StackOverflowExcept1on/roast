@@ -1,0 +1,201 @@
+//! Distributed Key Generation functions and structures.
+
+use crate::error::{DistributedKeyGenerationError, Error, FrostError};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
+use frost_core::{
+    keys::{
+        dkg::{self, round1, round2},
+        PublicKeyPackage, SecretShare,
+    },
+    Ciphersuite, Identifier,
+};
+
+/// Represents all possible Distributed Key Generation statuses.
+pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
+    /// Distributed Key Generation still in progress.
+    InProgress,
+    /// Finished round1 of Distributed Key Generation.
+    FinishedRound1 {
+        /// Round1 packages.
+        round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+    },
+    /// Finished round2 of Distributed Key Generation.
+    FinishedRound2 {
+        /// Round2 packages.
+        round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+        /// Public key package.
+        public_key_package: PublicKeyPackage<C>,
+    },
+}
+
+/// Represents a trusted third party that can be used for Distributed Key
+/// Generation.
+pub struct TrustedThirdParty<C: Ciphersuite> {
+    max_signers: u16,
+    min_signers: u16,
+    participants: Vec<Identifier<C>>,
+    participants_set: BTreeSet<Identifier<C>>,
+    round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+    round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+}
+
+impl<C: Ciphersuite> TrustedThirdParty<C> {
+    /// Creates a new [`TrustedThirdParty`].
+    pub fn new(
+        max_signers: u16,
+        min_signers: u16,
+        participants: Vec<Identifier<C>>,
+    ) -> Result<Self, Error<C>> {
+        if min_signers < 2 {
+            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        }
+
+        if max_signers < 2 {
+            return Err(Error::Frost(FrostError::InvalidMaxSigners));
+        }
+
+        if min_signers > max_signers {
+            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        }
+
+        let participants_set = BTreeSet::from_iter(participants.clone());
+        if participants_set.len() != participants.len() {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::DuplicateParticipants,
+            ));
+        }
+
+        Ok(Self {
+            max_signers,
+            min_signers,
+            participants,
+            participants_set,
+            round1_packages: BTreeMap::new(),
+            round2_packages: BTreeMap::new(),
+        })
+    }
+
+    /// Returns the maximum number of signers.
+    pub fn max_signers(&self) -> u16 {
+        self.max_signers
+    }
+
+    /// Returns the minimum number of signers.
+    pub fn min_signers(&self) -> u16 {
+        self.min_signers
+    }
+
+    /// Returns the participants.
+    pub fn participants(&self) -> &[Identifier<C>] {
+        &self.participants
+    }
+
+    /// Returns the round1 packages.
+    pub fn round1_packages(&self) -> &BTreeMap<Identifier<C>, round1::Package<C>> {
+        &self.round1_packages
+    }
+
+    /// Returns the round2 packages.
+    pub fn round2_packages(&self) -> &BTreeMap<Identifier<C>, round2::Package<C>> {
+        &self.round2_packages
+    }
+
+    /// Receives the [`Identifier`] and [`round1::Package<C>`] from the
+    /// participant.
+    pub fn receive_round1_package(
+        &mut self,
+        identifier: Identifier<C>,
+        round1_package: round1::Package<C>,
+    ) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
+        if !self.participants_set.contains(&identifier) {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::UnknownParticipant,
+            ));
+        }
+
+        if round1_package.commitment().coefficients().len() != self.min_signers as usize {
+            return Err(Error::Frost(FrostError::IncorrectNumberOfCommitments));
+        }
+
+        dkg::verify_proof_of_knowledge(
+            identifier,
+            round1_package.commitment(),
+            round1_package.proof_of_knowledge(),
+        )?;
+
+        self.round1_packages.insert(identifier, round1_package);
+
+        if self.round1_packages.len() == self.max_signers as usize {
+            return Ok(DistributedKeyGenerationStatus::FinishedRound1 {
+                round1_packages: self.round1_packages.clone(),
+            });
+        }
+
+        Ok(DistributedKeyGenerationStatus::InProgress)
+    }
+
+    /// Returns an iterator of participants who have not sent their round1
+    /// package.
+    pub fn blame_round1_participants(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
+        self.participants
+            .iter()
+            .filter(|id| !self.round1_packages.contains_key(id))
+            .copied()
+    }
+
+    /// Receives the [`Identifier`] and [`round2::Package<C>`] from the
+    /// participant.
+    pub fn receive_round2_package(
+        &mut self,
+        identifier: Identifier<C>,
+        round2_package: round2::Package<C>,
+    ) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
+        if !self.participants_set.contains(&identifier) {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::UnknownParticipant,
+            ));
+        }
+
+        let ell = identifier;
+        let f_ell_i = *round2_package.signing_share();
+
+        let commitment = self
+            .round1_packages
+            .get(&ell)
+            .ok_or(FrostError::PackageNotFound)?
+            .commitment();
+
+        let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
+
+        let _ = secret_share.verify()?;
+
+        self.round2_packages.insert(identifier, round2_package);
+
+        if self.round2_packages.len() == self.max_signers as usize {
+            let commitments: BTreeMap<_, _> = self
+                .round1_packages
+                .iter()
+                .map(|(id, package)| (*id, package.commitment()))
+                .collect();
+            let public_key_package = PublicKeyPackage::from_dkg_commitments(&commitments)?;
+            return Ok(DistributedKeyGenerationStatus::FinishedRound2 {
+                round2_packages: self.round2_packages.clone(),
+                public_key_package,
+            });
+        }
+
+        Ok(DistributedKeyGenerationStatus::InProgress)
+    }
+
+    /// Returns an iterator of participants who have not sent their round2
+    /// package.
+    pub fn blame_round2_participants(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
+        self.participants
+            .iter()
+            .filter(|id| !self.round2_packages.contains_key(id))
+            .copied()
+    }
+}

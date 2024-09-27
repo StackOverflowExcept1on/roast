@@ -1,11 +1,12 @@
 //! Test cases.
 
 use crate::{
+    error::{Error, RoastError},
     frost::{
         keys::{self, IdentifierList, KeyPackage},
         Ciphersuite,
     },
-    Coordinator, Error, SessionStatus, Signer,
+    Coordinator, SessionStatus, Signer,
 };
 use alloc::collections::BTreeMap;
 use frost_core::{round2::SignatureShare, Field, Group};
@@ -84,9 +85,11 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                     }
                     SessionStatus::Finished { .. } => break 'outer,
                 },
-                Err(Error::MaliciousSigner(_)) => continue 'inner,
-                Err(Error::TooManyMaliciousSigners) => unreachable!(),
-                Err(err) => return Err(err)?,
+                Err(Error::Roast(RoastError::MaliciousSigner(_))) => continue 'inner,
+                Err(Error::Roast(RoastError::TooManyMaliciousSigners) | Error::Dkg(_)) => {
+                    unreachable!()
+                }
+                Err(err) => return Err(err),
             }
         }
     }

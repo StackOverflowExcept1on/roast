@@ -1,5 +1,5 @@
 use roast_core::tests;
-use roast_ed448::{frost::rand_core::OsRng, Error};
+use roast_ed448::{error::Error, frost::rand_core::OsRng};
 
 #[test]
 fn test_basic() -> Result<(), Error> {

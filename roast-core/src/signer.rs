@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::error::Error;
 use frost_core::{
     keys::KeyPackage,
     round1::{self, SigningCommitments, SigningNonces},
