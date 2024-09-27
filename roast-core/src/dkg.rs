@@ -1,4 +1,4 @@
-//! Distributed Key Generation functions and structures.
+//! Distributed Key Generation types.
 
 use crate::error::{DistributedKeyGenerationError, Error, FrostError};
 use alloc::{
@@ -205,7 +205,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
     }
 }
 
-/// TODO.
+/// Represents participant of Distributed Key Generation.
 #[derive(Debug)]
 pub struct Participant<C: Ciphersuite> {
     identifier: Identifier<C>,

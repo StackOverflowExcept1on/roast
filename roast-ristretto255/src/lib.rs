@@ -11,6 +11,22 @@ mod coordinator {
     pub type Coordinator = roast_core::Coordinator<frost_ristretto255::Ristretto255Sha512>;
 }
 
+pub mod dkg {
+    //! Distributed Key Generation types.
+
+    /// Represents all possible Distributed Key Generation statuses.
+    pub type DistributedKeyGenerationStatus =
+        roast_core::dkg::DistributedKeyGenerationStatus<frost_ristretto255::Ristretto255Sha512>;
+
+    /// Represents trusted third party that can be used for Distributed Key
+    /// Generation.
+    pub type TrustedThirdParty =
+        roast_core::dkg::TrustedThirdParty<frost_ristretto255::Ristretto255Sha512>;
+
+    /// Represents participant of Distributed Key Generation.
+    pub type Participant = roast_core::dkg::Participant<frost_ristretto255::Ristretto255Sha512>;
+}
+
 pub mod error {
     //! Error types.
 
