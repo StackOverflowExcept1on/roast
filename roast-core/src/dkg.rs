@@ -8,12 +8,14 @@ use alloc::{
 use frost_core::{
     keys::{
         dkg::{self, round1, round2},
-        PublicKeyPackage, SecretShare,
+        KeyPackage, PublicKeyPackage, SecretShare,
     },
     Ciphersuite, Identifier,
 };
+use rand_core::{CryptoRng, RngCore};
 
 /// Represents all possible Distributed Key Generation statuses.
+#[derive(Debug)]
 pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
     /// Distributed Key Generation still in progress.
     InProgress,
@@ -31,8 +33,9 @@ pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
     },
 }
 
-/// Represents a trusted third party that can be used for Distributed Key
+/// Represents trusted third party that can be used for Distributed Key
 /// Generation.
+#[derive(Debug)]
 pub struct TrustedThirdParty<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
@@ -49,6 +52,8 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         min_signers: u16,
         participants: Vec<Identifier<C>>,
     ) -> Result<Self, Error<C>> {
+        // TODO: https://github.com/ZcashFoundation/frost/issues/736
+
         if min_signers < 2 {
             return Err(Error::Frost(FrostError::InvalidMinSigners));
         }
@@ -197,5 +202,87 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .iter()
             .filter(|id| !self.round2_packages.contains_key(id))
             .copied()
+    }
+}
+
+/// TODO.
+#[derive(Debug)]
+pub struct Participant<C: Ciphersuite> {
+    identifier: Identifier<C>,
+    // TODO: ^ remove identifier, https://github.com/ZcashFoundation/frost/issues/737
+    round1_secret_package: round1::SecretPackage<C>,
+    round1_package: round1::Package<C>,
+    // TODO: ^ maybe group into one Option<T> to use .take()
+    round2_secret_package: Option<round2::SecretPackage<C>>,
+    round2_packages: Option<BTreeMap<Identifier<C>, round2::Package<C>>>,
+    // TODO: ^ maybe group into one Option<T>
+}
+
+impl<C: Ciphersuite> Participant<C> {
+    /// Creates a new [`Participant`].
+    pub fn new<RNG: RngCore + CryptoRng>(
+        identifier: Identifier<C>,
+        max_signers: u16,
+        min_signers: u16,
+        rng: &mut RNG,
+    ) -> Result<Self, Error<C>> {
+        let (round1_secret_package, round1_package) =
+            dkg::part1(identifier, max_signers, min_signers, rng)?;
+
+        Ok(Self {
+            identifier,
+            round1_secret_package,
+            round1_package,
+            round2_secret_package: None,
+            round2_packages: None,
+        })
+    }
+
+    /// Returns the [`round1::Package<C>`], i.e. the public part of
+    /// [`round1::SecretPackage<C>`] that is used for the first round of DKG.
+    pub fn round1_package(&self) -> round1::Package<C> {
+        self.round1_package.clone()
+    }
+
+    /// TODO.
+    pub fn receive_round1_packages(
+        &mut self,
+        mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+    ) -> Result<BTreeMap<Identifier<C>, round2::Package<C>>, Error<C>> {
+        // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
+        round1_packages.remove(&self.identifier);
+
+        // TODO: consider using Option<T> for round1_secret_package (use .take())
+        let (round2_secret_package, round2_packages) =
+            dkg::part2(self.round1_secret_package.clone(), &round1_packages)?;
+
+        self.round2_secret_package = Some(round2_secret_package);
+        self.round2_packages = Some(round2_packages.clone());
+
+        Ok(round2_packages)
+    }
+
+    /// TODO.
+    pub fn receive_round2_packages(
+        &mut self,
+        mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+        mut round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+    ) -> Result<(KeyPackage<C>, PublicKeyPackage<C>), Error<C>> {
+        let Some(round2_secret_package) = self.round2_secret_package.as_ref() else {
+            // TODO: handle this in a better way
+            panic!("round2_secret_package is None");
+        };
+
+        // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
+        round1_packages.remove(&self.identifier);
+        // TODO: ^ maybe store this in a field as Option<T>
+
+        // TODO: round2_packages.remove(&self.round1_secret_package.identifier());
+        round2_packages.remove(&self.identifier);
+
+        let (key_package, public_key_package) =
+            dkg::part3(round2_secret_package, &round1_packages, &round2_packages)?;
+
+        Ok((key_package, public_key_package))
     }
 }

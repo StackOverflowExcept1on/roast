@@ -43,6 +43,7 @@ pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
     public_key_package: PublicKeyPackage<C>,
+    // TODO: make 2 versions of coordinator (coordinator and coordinator-signer)
     message: Vec<u8>,
     responsive_signers: BTreeSet<Identifier<C>>,
     malicious_signers: BTreeMap<Identifier<C>, MaliciousSignerError>,
@@ -60,6 +61,8 @@ impl<C: Ciphersuite> Coordinator<C> {
         public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
     ) -> Result<Self, Error<C>> {
+        // TODO: https://github.com/ZcashFoundation/frost/issues/736
+
         if min_signers < 2 {
             return Err(Error::Frost(FrostError::InvalidMinSigners));
         }
