@@ -1,6 +1,7 @@
 //! Test cases.
 
 use crate::{
+    dkg::{DistributedKeyGenerationStatus, Participant, TrustedThirdParty},
     error::{Error, RoastError},
     frost::{
         keys::{self, IdentifierList, KeyPackage},
@@ -11,6 +12,55 @@ use crate::{
 use alloc::collections::BTreeMap;
 use frost_core::{round2::SignatureShare, Field, Group};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
+
+/// TODO.
+pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
+    min_signers: u16,
+    max_signers: u16,
+    rng: &mut RNG,
+) -> Result<(), Error<C>> {
+    let mut identifiers = vec![];
+    let mut participants = vec![];
+
+    for participant_index in 1..=max_signers {
+        let identifier = participant_index.try_into().expect("should be nonzero");
+        identifiers.push(identifier);
+        let participant = Participant::new(identifier, max_signers, min_signers, rng)?;
+        participants.push(participant);
+    }
+
+    let mut trusted_third_party = TrustedThirdParty::new(max_signers, min_signers, identifiers)?;
+
+    for participant in participants.iter_mut() {
+        let status = trusted_third_party
+            .receive_round1_package(participant.identifier(), participant.round1_package())?;
+        //dbg!(trusted_third_party.blame_round1_participants().collect::<Vec<_>>());
+        dbg!(&status);
+    }
+
+    for participant in participants.iter_mut() {
+        let round2_packages =
+            participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
+        let status = trusted_third_party
+            .receive_round2_packages(participant.identifier(), round2_packages)?;
+        dbg!(&status);
+    }
+
+    for participant in participants.iter_mut() {
+        let (key_package, public_key_package) = participant.receive_round2_packages(
+            trusted_third_party.round1_packages().clone(),
+            trusted_third_party
+                .round2_packages()
+                .clone()
+                .get(&participant.identifier())
+                .unwrap()
+                .clone(),
+        )?;
+        dbg!(key_package, public_key_package);
+    }
+
+    Ok(())
+}
 
 /// Runs ROAST algorithm with `min_signers`/`max_signers` multi-signature and no
 /// malicious signers.

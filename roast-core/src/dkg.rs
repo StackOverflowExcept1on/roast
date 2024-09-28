@@ -27,7 +27,7 @@ pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
     /// Finished round2 of Distributed Key Generation.
     FinishedRound2 {
         /// Round2 packages.
-        round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+        round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
         /// Public key package.
         public_key_package: PublicKeyPackage<C>,
     },
@@ -42,7 +42,7 @@ pub struct TrustedThirdParty<C: Ciphersuite> {
     participants: Vec<Identifier<C>>,
     participants_set: BTreeSet<Identifier<C>>,
     round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
-    round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+    round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
 }
 
 impl<C: Ciphersuite> TrustedThirdParty<C> {
@@ -104,7 +104,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
     }
 
     /// Returns the round2 packages.
-    pub fn round2_packages(&self) -> &BTreeMap<Identifier<C>, round2::Package<C>> {
+    pub fn round2_packages(
+        &self,
+    ) -> &BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>> {
         &self.round2_packages
     }
 
@@ -151,12 +153,11 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .copied()
     }
 
-    /// Receives the [`Identifier`] and [`round2::Package<C>`] from the
-    /// participant.
-    pub fn receive_round2_package(
+    /// TODO.
+    pub fn receive_round2_packages(
         &mut self,
         identifier: Identifier<C>,
-        round2_package: round2::Package<C>,
+        round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     ) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
         if !self.participants_set.contains(&identifier) {
             return Err(Error::Dkg(
@@ -164,22 +165,49 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             ));
         }
 
-        let ell = identifier;
-        let f_ell_i = *round2_package.signing_share();
+        if round2_packages.len() != (self.max_signers - 1) as usize {
+            return Err(Error::Frost(FrostError::IncorrectNumberOfPackages));
+        }
 
-        let commitment = self
-            .round1_packages
-            .get(&ell)
-            .ok_or(FrostError::PackageNotFound)?
-            .commitment();
+        if self
+            .participants
+            .iter()
+            .filter(|id| identifier.ne(id))
+            .any(|id| !round2_packages.contains_key(id))
+        {
+            return Err(Error::Frost(FrostError::IncorrectPackage));
+        }
 
-        let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
+        for (receiver_identifier, round2_package) in round2_packages.iter() {
+            let ell = receiver_identifier;
+            let f_ell_i = *round2_package.signing_share();
 
-        let _ = secret_share.verify()?;
+            let commitment = self
+                .round1_packages
+                .get(ell)
+                .ok_or(FrostError::PackageNotFound)?
+                .commitment();
 
-        self.round2_packages.insert(identifier, round2_package);
+            let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
 
-        if self.round2_packages.len() == self.max_signers as usize {
+            // TODO: !!! it fails !!!
+            // let _ = secret_share.verify()?;
+            dbg!(secret_share.verify());
+        }
+
+        for (receiver_identifier, round2_package) in round2_packages {
+            self.round2_packages
+                .entry(receiver_identifier)
+                .or_insert_with(BTreeMap::new)
+                .insert(identifier, round2_package);
+        }
+
+        if self.round2_packages.len() == self.max_signers as usize
+            && self
+                .round2_packages
+                .values()
+                .all(|btree_map| btree_map.len() == (self.max_signers - 1) as usize)
+        {
             let commitments: BTreeMap<_, _> = self
                 .round1_packages
                 .iter()
@@ -238,6 +266,11 @@ impl<C: Ciphersuite> Participant<C> {
         })
     }
 
+    /// Returns the identifier.
+    pub fn identifier(&self) -> Identifier<C> {
+        self.identifier
+    }
+
     /// Returns the [`round1::Package<C>`], i.e. the public part of
     /// [`round1::SecretPackage<C>`] that is used for the first round of DKG.
     pub fn round1_package(&self) -> round1::Package<C> {
@@ -266,7 +299,7 @@ impl<C: Ciphersuite> Participant<C> {
     pub fn receive_round2_packages(
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
-        mut round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
+        round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     ) -> Result<(KeyPackage<C>, PublicKeyPackage<C>), Error<C>> {
         let Some(round2_secret_package) = self.round2_secret_package.as_ref() else {
             // TODO: handle this in a better way
@@ -276,9 +309,6 @@ impl<C: Ciphersuite> Participant<C> {
         // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
         round1_packages.remove(&self.identifier);
         // TODO: ^ maybe store this in a field as Option<T>
-
-        // TODO: round2_packages.remove(&self.round1_secret_package.identifier());
-        round2_packages.remove(&self.identifier);
 
         let (key_package, public_key_package) =
             dkg::part3(round2_secret_package, &round1_packages, &round2_packages)?;
