@@ -8,7 +8,7 @@ use alloc::{
 use frost_core::{
     keys::{
         dkg::{self, round1, round2},
-        KeyPackage, PublicKeyPackage, SecretShare,
+        KeyPackage, PublicKeyPackage,
     },
     Ciphersuite, Identifier,
 };
@@ -20,14 +20,11 @@ pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
     /// Distributed Key Generation still in progress.
     InProgress,
     /// Finished round1 of Distributed Key Generation.
-    FinishedRound1 {
-        /// Round1 packages.
-        round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
-    },
+    FinishedRound1,
     /// Finished round2 of Distributed Key Generation.
-    FinishedRound2 {
-        /// Round2 packages.
-        round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
+    FinishedRound2,
+    /// Finished round3 of Distributed Key Generation.
+    FinishedRound3 {
         /// Public key package.
         public_key_package: PublicKeyPackage<C>,
     },
@@ -43,6 +40,7 @@ pub struct TrustedThirdParty<C: Ciphersuite> {
     participants_set: BTreeSet<Identifier<C>>,
     round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
+    round2_participants_set: BTreeSet<Identifier<C>>,
 }
 
 impl<C: Ciphersuite> TrustedThirdParty<C> {
@@ -80,6 +78,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             participants_set,
             round1_packages: BTreeMap::new(),
             round2_packages: BTreeMap::new(),
+            round2_participants_set: BTreeSet::new(),
         })
     }
 
@@ -136,9 +135,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         self.round1_packages.insert(identifier, round1_package);
 
         if self.round1_packages.len() == self.max_signers as usize {
-            return Ok(DistributedKeyGenerationStatus::FinishedRound1 {
-                round1_packages: self.round1_packages.clone(),
-            });
+            return Ok(DistributedKeyGenerationStatus::FinishedRound1);
         }
 
         Ok(DistributedKeyGenerationStatus::InProgress)
@@ -153,7 +150,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .copied()
     }
 
-    /// TODO.
+    /// Receives the [`Identifier`] and `round2_packages` from the participant.
     pub fn receive_round2_packages(
         &mut self,
         identifier: Identifier<C>,
@@ -178,46 +175,17 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             return Err(Error::Frost(FrostError::IncorrectPackage));
         }
 
-        for (receiver_identifier, round2_package) in round2_packages.iter() {
-            let ell = receiver_identifier;
-            let f_ell_i = *round2_package.signing_share();
-
-            let commitment = self
-                .round1_packages
-                .get(ell)
-                .ok_or(FrostError::PackageNotFound)?
-                .commitment();
-
-            let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
-
-            // TODO: !!! it fails !!!
-            // let _ = secret_share.verify()?;
-            dbg!(secret_share.verify());
-        }
-
         for (receiver_identifier, round2_package) in round2_packages {
             self.round2_packages
                 .entry(receiver_identifier)
-                .or_insert_with(BTreeMap::new)
+                .or_default()
                 .insert(identifier, round2_package);
         }
 
-        if self.round2_packages.len() == self.max_signers as usize
-            && self
-                .round2_packages
-                .values()
-                .all(|btree_map| btree_map.len() == (self.max_signers - 1) as usize)
-        {
-            let commitments: BTreeMap<_, _> = self
-                .round1_packages
-                .iter()
-                .map(|(id, package)| (*id, package.commitment()))
-                .collect();
-            let public_key_package = PublicKeyPackage::from_dkg_commitments(&commitments)?;
-            return Ok(DistributedKeyGenerationStatus::FinishedRound2 {
-                round2_packages: self.round2_packages.clone(),
-                public_key_package,
-            });
+        self.round2_participants_set.insert(identifier);
+
+        if self.round2_participants_set.len() == self.max_signers as usize {
+            return Ok(DistributedKeyGenerationStatus::FinishedRound2);
         }
 
         Ok(DistributedKeyGenerationStatus::InProgress)
@@ -228,7 +196,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
     pub fn blame_round2_participants(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
         self.participants
             .iter()
-            .filter(|id| !self.round2_packages.contains_key(id))
+            .filter(|id| !self.round2_participants_set.contains(id))
             .copied()
     }
 }

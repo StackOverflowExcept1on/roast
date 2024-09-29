@@ -1,7 +1,7 @@
 //! Test cases.
 
 use crate::{
-    dkg::{DistributedKeyGenerationStatus, Participant, TrustedThirdParty},
+    dkg::{Participant, TrustedThirdParty},
     error::{Error, RoastError},
     frost::{
         keys::{self, IdentifierList, KeyPackage},
@@ -34,20 +34,21 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     for participant in participants.iter_mut() {
         let status = trusted_third_party
             .receive_round1_package(participant.identifier(), participant.round1_package())?;
-        //dbg!(trusted_third_party.blame_round1_participants().collect::<Vec<_>>());
-        dbg!(&status);
+        dbg!(trusted_third_party.blame_round1_participants().collect::<Vec<_>>());
+        dbg!(status);
     }
 
     for participant in participants.iter_mut() {
         let round2_packages =
             participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
+        dbg!(trusted_third_party.blame_round2_participants().collect::<Vec<_>>());
         let status = trusted_third_party
             .receive_round2_packages(participant.identifier(), round2_packages)?;
-        dbg!(&status);
+        dbg!(status);
     }
 
     for participant in participants.iter_mut() {
-        let (key_package, public_key_package) = participant.receive_round2_packages(
+        let (_key_package, _public_key_package) = participant.receive_round2_packages(
             trusted_third_party.round1_packages().clone(),
             trusted_third_party
                 .round2_packages()
@@ -56,7 +57,6 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                 .unwrap()
                 .clone(),
         )?;
-        dbg!(key_package, public_key_package);
     }
 
     Ok(())
