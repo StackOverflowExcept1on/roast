@@ -34,6 +34,11 @@ pub mod error {
 
     pub use roast_core::error::{MaliciousSignerError, RoastError};
 
+    /// Represents all possible errors that can occur in Distributed Key
+    /// Generation.
+    pub type DistributedKeyGenerationError =
+        roast_core::error::DistributedKeyGenerationError<frost_p256::P256Sha256>;
+
     /// Represents all possible errors that can occur.
     pub type Error = roast_core::error::Error<frost_p256::P256Sha256>;
 }
