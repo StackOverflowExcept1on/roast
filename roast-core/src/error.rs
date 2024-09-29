@@ -1,6 +1,7 @@
 //! Error types.
 
-use frost_core::Ciphersuite;
+use alloc::collections::BTreeSet;
+use frost_core::{Ciphersuite, Identifier};
 #[cfg(feature = "std")]
 use thiserror::Error;
 #[cfg(not(feature = "std"))]
@@ -32,18 +33,24 @@ pub enum RoastError {
 }
 
 /// Represents all possible errors that can occur in Distributed Key Generation.
-#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
-pub enum DistributedKeyGenerationError {
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
+pub enum DistributedKeyGenerationError<C: Ciphersuite> {
     /// Duplicate participants.
     #[error("Duplicate participants")]
     DuplicateParticipants,
     /// Unknown participant.
     #[error("Unknown participant")]
     UnknownParticipant,
+    /// Invalid secret shares.
+    #[error("Invalid secret shares")]
+    InvalidSecretShares {
+        /// Set of participants with invalid secret shares.
+        culprits: BTreeSet<Identifier<C>>,
+    },
 }
 
 /// Represents all possible errors that can occur.
-#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum Error<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
@@ -53,5 +60,5 @@ pub enum Error<C: Ciphersuite> {
     Roast(#[from] RoastError),
     /// Error in Distributed Key Generation.
     #[error("DKG error: {0}")]
-    Dkg(#[from] DistributedKeyGenerationError),
+    Dkg(#[from] DistributedKeyGenerationError<C>),
 }

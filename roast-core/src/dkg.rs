@@ -8,7 +8,7 @@ use alloc::{
 use frost_core::{
     keys::{
         dkg::{self, round1, round2},
-        KeyPackage, PublicKeyPackage,
+        KeyPackage, PublicKeyPackage, SecretShare,
     },
     Ciphersuite, Identifier,
 };
@@ -199,6 +199,50 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .iter()
             .filter(|id| !self.round2_participants_set.contains(id))
             .copied()
+    }
+
+    /// TODO.
+    pub fn validate_round2_packages(&self) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
+        let mut culprits = BTreeSet::new();
+
+        for receiver_identifier in self.participants.iter().copied() {
+            let round2_packages = self
+                .round2_packages(receiver_identifier)
+                .expect("infallible");
+            for (sender_identifier, round2_package) in round2_packages {
+                let ell = *sender_identifier;
+                let f_ell_i = *round2_package.signing_share();
+
+                let commitment = self
+                    .round1_packages
+                    .get(&ell)
+                    .ok_or(FrostError::PackageNotFound)?
+                    .commitment();
+
+                let secret_share =
+                    SecretShare::new(receiver_identifier, f_ell_i, commitment.clone());
+
+                let verification_result = secret_share.verify();
+                if let Err(FrostError::InvalidSecretShare) = verification_result {
+                    culprits.insert(ell);
+                }
+            }
+        }
+
+        if !culprits.is_empty() {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::InvalidSecretShares { culprits },
+            ));
+        }
+
+        let commitments: BTreeMap<_, _> = self
+            .round1_packages
+            .iter()
+            .map(|(id, package)| (*id, package.commitment()))
+            .collect();
+        let public_key_package = PublicKeyPackage::from_dkg_commitments(&commitments)?;
+
+        Ok(DistributedKeyGenerationStatus::FinishedRound3 { public_key_package })
     }
 }
 
