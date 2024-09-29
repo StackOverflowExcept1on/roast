@@ -102,11 +102,12 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &self.round1_packages
     }
 
-    /// Returns the round2 packages.
+    /// Returns the round2 packages by receiver identifier.
     pub fn round2_packages(
         &self,
-    ) -> &BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>> {
-        &self.round2_packages
+        receiver_identifier: Identifier<C>,
+    ) -> Option<&BTreeMap<Identifier<C>, round2::Package<C>>> {
+        self.round2_packages.get(&receiver_identifier)
     }
 
     /// Receives the [`Identifier`] and [`round1::Package<C>`] from the

@@ -13,7 +13,8 @@ use alloc::collections::BTreeMap;
 use frost_core::{round2::SignatureShare, Field, Group};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
-/// TODO.
+/// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
+/// participants.
 pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     min_signers: u16,
     max_signers: u16,
@@ -34,29 +35,33 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     for participant in participants.iter_mut() {
         let status = trusted_third_party
             .receive_round1_package(participant.identifier(), participant.round1_package())?;
-        dbg!(trusted_third_party.blame_round1_participants().collect::<Vec<_>>());
+        dbg!(trusted_third_party
+            .blame_round1_participants()
+            .collect::<Vec<_>>());
         dbg!(status);
     }
 
     for participant in participants.iter_mut() {
         let round2_packages =
             participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
-        dbg!(trusted_third_party.blame_round2_participants().collect::<Vec<_>>());
         let status = trusted_third_party
             .receive_round2_packages(participant.identifier(), round2_packages)?;
+        dbg!(trusted_third_party
+            .blame_round2_participants()
+            .collect::<Vec<_>>());
         dbg!(status);
     }
 
     for participant in participants.iter_mut() {
-        let (_key_package, _public_key_package) = participant.receive_round2_packages(
-            trusted_third_party.round1_packages().clone(),
-            trusted_third_party
-                .round2_packages()
-                .clone()
-                .get(&participant.identifier())
-                .unwrap()
-                .clone(),
-        )?;
+        let round1_packages = trusted_third_party.round1_packages().clone();
+        if let Some(round2_packages) = trusted_third_party
+            .round2_packages(participant.identifier())
+            .cloned()
+        {
+            let (key_package, public_key_package) =
+                participant.receive_round2_packages(round1_packages, round2_packages)?;
+            dbg!(key_package, public_key_package);
+        }
     }
 
     Ok(())
@@ -136,10 +141,9 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                     SessionStatus::Finished { .. } => break 'outer,
                 },
                 Err(Error::Roast(RoastError::MaliciousSigner(_))) => continue 'inner,
-                Err(Error::Roast(RoastError::TooManyMaliciousSigners) | Error::Dkg(_)) => {
-                    unreachable!()
-                }
-                Err(err) => return Err(err),
+                Err(Error::Roast(RoastError::TooManyMaliciousSigners)) => unreachable!(),
+                Err(Error::Dkg(_)) => unimplemented!(),
+                Err(Error::Frost(err)) => return Err(err)?,
             }
         }
     }
