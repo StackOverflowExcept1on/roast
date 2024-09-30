@@ -16,18 +16,13 @@ use rand_core::{CryptoRng, RngCore};
 
 /// Represents all possible Distributed Key Generation statuses.
 #[derive(Debug)]
-pub enum DistributedKeyGenerationStatus<C: Ciphersuite> {
+pub enum DistributedKeyGenerationStatus {
     /// Distributed Key Generation still in progress.
     InProgress,
     /// Finished round1 of Distributed Key Generation.
     FinishedRound1,
     /// Finished round2 of Distributed Key Generation.
     FinishedRound2,
-    /// Finished round3 of Distributed Key Generation.
-    FinishedRound3 {
-        /// Public key package.
-        public_key_package: PublicKeyPackage<C>,
-    },
 }
 
 /// Represents trusted third party that can be used for Distributed Key
@@ -41,6 +36,7 @@ pub struct TrustedThirdParty<C: Ciphersuite> {
     round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
     round2_participants_set: BTreeSet<Identifier<C>>,
+    round2_culprits_set: BTreeSet<Identifier<C>>,
 }
 
 impl<C: Ciphersuite> TrustedThirdParty<C> {
@@ -79,6 +75,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             round1_packages: BTreeMap::new(),
             round2_packages: BTreeMap::new(),
             round2_participants_set: BTreeSet::new(),
+            round2_culprits_set: BTreeSet::new(),
         })
     }
 
@@ -92,9 +89,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         self.min_signers
     }
 
-    /// Returns the participants.
-    pub fn participants(&self) -> &[Identifier<C>] {
-        &self.participants
+    /// Returns an iterator of participants.
+    pub fn participants(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
+        self.participants.iter().copied()
     }
 
     /// Returns the round1 packages.
@@ -116,7 +113,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &mut self,
         identifier: Identifier<C>,
         round1_package: round1::Package<C>,
-    ) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
+    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
         if !self.participants_set.contains(&identifier) {
             return Err(Error::Dkg(
                 DistributedKeyGenerationError::UnknownParticipant,
@@ -156,7 +153,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &mut self,
         identifier: Identifier<C>,
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
-    ) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
+    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
         if !self.participants_set.contains(&identifier) {
             return Err(Error::Dkg(
                 DistributedKeyGenerationError::UnknownParticipant,
@@ -201,48 +198,67 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .copied()
     }
 
-    /// TODO.
-    pub fn validate_round2_packages(&self) -> Result<DistributedKeyGenerationStatus<C>, Error<C>> {
-        let mut culprits = BTreeSet::new();
-
-        for receiver_identifier in self.participants.iter().copied() {
-            let round2_packages = self
-                .round2_packages(receiver_identifier)
-                .expect("infallible");
-            for (sender_identifier, round2_package) in round2_packages {
-                let ell = *sender_identifier;
-                let f_ell_i = *round2_package.signing_share();
-
-                let commitment = self
-                    .round1_packages
-                    .get(&ell)
-                    .ok_or(FrostError::PackageNotFound)?
-                    .commitment();
-
-                let secret_share =
-                    SecretShare::new(receiver_identifier, f_ell_i, commitment.clone());
-
-                let verification_result = secret_share.verify();
-                if let Err(FrostError::InvalidSecretShare) = verification_result {
-                    culprits.insert(ell);
-                }
-            }
-        }
-
-        if !culprits.is_empty() {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::InvalidSecretShares { culprits },
-            ));
-        }
-
+    /// Returns the public key package.
+    pub fn public_key_package(&self) -> Result<PublicKeyPackage<C>, Error<C>> {
         let commitments: BTreeMap<_, _> = self
             .round1_packages
             .iter()
             .map(|(id, package)| (*id, package.commitment()))
             .collect();
         let public_key_package = PublicKeyPackage::from_dkg_commitments(&commitments)?;
+        Ok(public_key_package)
+    }
 
-        Ok(DistributedKeyGenerationStatus::FinishedRound3 { public_key_package })
+    /// Receives the [`Identifier`] and `round2_culprits` from the participant.
+    pub fn receive_round2_culprits(
+        &mut self,
+        identifier: Identifier<C>,
+        round2_culprits: BTreeSet<Identifier<C>>,
+    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
+        if !self.participants_set.contains(&identifier) {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::UnknownParticipant,
+            ));
+        }
+
+        if self
+            .participants
+            .iter()
+            .filter(|id| identifier.ne(id))
+            .any(|id| !round2_culprits.contains(id))
+        {
+            return Err(Error::Dkg(
+                DistributedKeyGenerationError::UnknownParticipant,
+            ));
+        }
+
+        if let Some(round2_packages) = self.round2_packages.get(&identifier) {
+            for (sender_identifier, round2_package) in round2_packages {
+                if round2_culprits.contains(sender_identifier) {
+                    let ell = *sender_identifier;
+                    let f_ell_i = *round2_package.signing_share();
+
+                    let commitment = self
+                        .round1_packages
+                        .get(&ell)
+                        .ok_or(FrostError::PackageNotFound)?
+                        .commitment();
+
+                    let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
+
+                    if let Err(FrostError::InvalidSecretShare) = secret_share.verify() {
+                        self.round2_culprits_set.insert(ell);
+                    }
+                }
+            }
+        }
+
+        Ok(DistributedKeyGenerationStatus::InProgress)
+    }
+
+    /// Returns an iterator of participants who sent an invalid round2 package.
+    pub fn round2_culprits(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
+        self.round2_culprits_set.iter().copied()
     }
 }
 

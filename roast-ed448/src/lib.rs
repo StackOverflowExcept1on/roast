@@ -14,9 +14,7 @@ mod coordinator {
 pub mod dkg {
     //! Distributed Key Generation types.
 
-    /// Represents all possible Distributed Key Generation statuses.
-    pub type DistributedKeyGenerationStatus =
-        roast_core::dkg::DistributedKeyGenerationStatus<frost_ed448::Ed448Shake256>;
+    pub use roast_core::dkg::DistributedKeyGenerationStatus;
 
     /// Represents trusted third party that can be used for Distributed Key
     /// Generation.

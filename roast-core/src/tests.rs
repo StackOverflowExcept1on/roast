@@ -64,8 +64,7 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
         }
     }
 
-    let status = trusted_third_party.validate_round2_packages()?;
-    dbg!(status);
+    // TODO: trusted_third_party.receive_round2_culprits()?;
 
     Ok(())
 }
