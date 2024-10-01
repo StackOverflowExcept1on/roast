@@ -6,12 +6,11 @@ use alloc::{
     vec::Vec,
 };
 use core::iter;
-use frost_core::keys::SigningShare;
 use frost_core::{
     keys::{
         self,
         dkg::{self, round1, round2},
-        KeyPackage, PublicKeyPackage, SecretShare,
+        KeyPackage, PublicKeyPackage, SecretShare, SigningShare,
     },
     Ciphersuite, Field, Group, Identifier,
 };

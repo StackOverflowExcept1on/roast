@@ -1,17 +1,16 @@
 //! Test cases.
 
-use crate::error::DkgError;
 use crate::{
     dkg::{Dealer, Participant},
-    error::{Error, RoastError},
-    frost::{
-        keys::{self, IdentifierList, KeyPackage},
-        Ciphersuite,
-    },
+    error::{DkgError, Error, RoastError},
     Coordinator, SessionStatus, Signer,
 };
 use alloc::collections::BTreeMap;
-use frost_core::{round2::SignatureShare, Field, Group};
+use frost_core::{
+    keys::{self, IdentifierList, KeyPackage},
+    round2::SignatureShare,
+    Ciphersuite, Field, Group,
+};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
 /// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
