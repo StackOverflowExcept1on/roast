@@ -2,7 +2,7 @@
 
 use crate::error::DkgError;
 use crate::{
-    dkg::{Participant, TrustedThirdParty},
+    dkg::{Dealer, Participant},
     error::{Error, RoastError},
     frost::{
         keys::{self, IdentifierList, KeyPackage},
@@ -31,44 +31,31 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
         participants.push(participant);
     }
 
-    let mut trusted_third_party = TrustedThirdParty::new(max_signers, min_signers, identifiers)?;
+    let mut dealer = Dealer::new(max_signers, min_signers, identifiers)?;
 
     for participant in participants.iter_mut() {
-        trusted_third_party
-            .receive_round1_package(participant.identifier(), participant.round1_package()?)?;
+        dealer.receive_round1_package(participant.identifier(), participant.round1_package()?)?;
     }
 
-    assert!(trusted_third_party
-        .blame_round1_participants()
-        .next()
-        .is_none());
+    assert!(dealer.blame_round1_participants().next().is_none());
 
     for participant in participants.iter_mut() {
         let round2_packages =
-            participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
-        trusted_third_party.receive_round2_packages(participant.identifier(), round2_packages)?;
+            participant.receive_round1_packages(dealer.round1_packages().clone())?;
+        dealer.receive_round2_packages(participant.identifier(), round2_packages)?;
     }
 
-    assert!(trusted_third_party
-        .blame_round2_participants()
-        .next()
-        .is_none());
+    assert!(dealer.blame_round2_participants().next().is_none());
 
     for participant in participants.iter_mut() {
-        if let Some(round2_packages) = trusted_third_party
-            .round2_packages(participant.identifier())
-            .cloned()
-        {
+        if let Some(round2_packages) = dealer.round2_packages(participant.identifier()).cloned() {
             match participant.receive_round2_packages(round2_packages) {
                 Ok((_key_package, public_key_package)) => {
-                    assert_eq!(
-                        public_key_package,
-                        trusted_third_party.public_key_package()?
-                    );
+                    assert_eq!(public_key_package, dealer.public_key_package()?);
                 }
                 Err(err) => {
                     if let Error::Dkg(DkgError::InvalidSecretShares) = err {
-                        trusted_third_party.receive_round2_culprits(
+                        dealer.receive_round2_culprits(
                             participant.identifier(),
                             participant.round2_culprits()?,
                         )?;
@@ -78,7 +65,7 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
         }
     }
 
-    trusted_third_party.try_finish()?;
+    dealer.try_finish()?;
 
     Ok(())
 }

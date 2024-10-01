@@ -30,10 +30,9 @@ pub enum DkgStatus {
     FinishedRound3,
 }
 
-/// Represents trusted third party that can be used for Distributed Key
-/// Generation.
+/// Represents dealer that can be used for Distributed Key Generation.
 #[derive(Debug)]
-pub struct TrustedThirdParty<C: Ciphersuite> {
+pub struct Dealer<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
     participants: Vec<Identifier<C>>,
@@ -44,8 +43,8 @@ pub struct TrustedThirdParty<C: Ciphersuite> {
     round2_culprits_set: BTreeSet<Identifier<C>>,
 }
 
-impl<C: Ciphersuite> TrustedThirdParty<C> {
-    /// Creates a new [`TrustedThirdParty`].
+impl<C: Ciphersuite> Dealer<C> {
+    /// Creates a new [`Dealer`].
     pub fn new(
         max_signers: u16,
         min_signers: u16,
@@ -301,7 +300,7 @@ impl<C: Ciphersuite> Participant<C> {
         Ok(round1_package)
     }
 
-    /// Receives `round1_packages` from the trusted third party.
+    /// Receives `round1_packages` from the dealer.
     pub fn receive_round1_packages(
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
@@ -321,7 +320,7 @@ impl<C: Ciphersuite> Participant<C> {
         Ok(round2_packages)
     }
 
-    /// Receives `round2_packages` from the trusted third party.
+    /// Receives `round2_packages` from the dealer.
     pub fn receive_round2_packages(
         &mut self,
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,

@@ -16,10 +16,8 @@ pub mod dkg {
 
     pub use roast_core::dkg::DkgStatus;
 
-    /// Represents trusted third party that can be used for Distributed Key
-    /// Generation.
-    pub type TrustedThirdParty =
-        roast_core::dkg::TrustedThirdParty<frost_ristretto255::Ristretto255Sha512>;
+    /// Represents dealer that can be used for Distributed Key Generation.
+    pub type Dealer = roast_core::dkg::Dealer<frost_ristretto255::Ristretto255Sha512>;
 
     /// Represents participant of Distributed Key Generation.
     pub type Participant = roast_core::dkg::Participant<frost_ristretto255::Ristretto255Sha512>;
