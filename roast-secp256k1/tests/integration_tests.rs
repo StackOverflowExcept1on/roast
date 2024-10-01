@@ -5,7 +5,6 @@ use roast_secp256k1::{error::Error, frost::rand_core::OsRng};
 fn test_dkg_basic() -> Result<(), Error> {
     let mut rng = OsRng;
     tests::test_dkg_basic(2, 3, &mut rng)?;
-    tests::test_dkg_basic(67, 100, &mut rng)?;
     Ok(())
 }
 

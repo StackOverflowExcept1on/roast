@@ -2,6 +2,13 @@ use roast_core::tests;
 use roast_ed25519::{error::Error, frost::rand_core::OsRng};
 
 #[test]
+fn test_dkg_basic() -> Result<(), Error> {
+    let mut rng = OsRng;
+    tests::test_dkg_basic(2, 3, &mut rng)?;
+    Ok(())
+}
+
+#[test]
 fn test_basic() -> Result<(), Error> {
     let mut rng = OsRng;
     tests::test_basic(2, 3, &mut rng)?;

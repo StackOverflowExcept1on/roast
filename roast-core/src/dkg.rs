@@ -5,12 +5,15 @@ use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
 };
+use core::iter;
+use frost_core::keys::SigningShare;
 use frost_core::{
     keys::{
+        self,
         dkg::{self, round1, round2},
         KeyPackage, PublicKeyPackage, SecretShare,
     },
-    Ciphersuite, Identifier,
+    Ciphersuite, Field, Group, Identifier,
 };
 use rand_core::{CryptoRng, RngCore};
 
@@ -48,19 +51,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         min_signers: u16,
         participants: Vec<Identifier<C>>,
     ) -> Result<Self, Error<C>> {
-        // TODO: https://github.com/ZcashFoundation/frost/issues/736
-
-        if min_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
-
-        if max_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMaxSigners));
-        }
-
-        if min_signers > max_signers {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
+        keys::validate_num_of_signers(min_signers, max_signers)?;
 
         let participants_set = BTreeSet::from_iter(participants.clone());
         if participants_set.len() != participants.len() {
@@ -236,7 +227,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
 
                     let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
 
-                    if let Err(FrostError::InvalidSecretShare) = secret_share.verify() {
+                    if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
                         self.round2_culprits_set.insert(ell);
                     }
                 }
@@ -265,7 +256,6 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
 #[derive(Debug)]
 pub struct Participant<C: Ciphersuite> {
     identifier: Identifier<C>,
-    max_signers: u16, // TODO: https://github.com/ZcashFoundation/frost/issues/737
     round1_secret_package: Option<round1::SecretPackage<C>>,
     round1_package: Option<round1::Package<C>>,
     round2_secret_package: Option<round2::SecretPackage<C>>,
@@ -287,7 +277,6 @@ impl<C: Ciphersuite> Participant<C> {
 
         Ok(Self {
             identifier,
-            max_signers,
             round1_secret_package: Some(round1_secret_package),
             round1_package: Some(round1_package),
             round2_secret_package: None,
@@ -317,12 +306,11 @@ impl<C: Ciphersuite> Participant<C> {
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     ) -> Result<BTreeMap<Identifier<C>, round2::Package<C>>, Error<C>> {
-        round1_packages.remove(&self.identifier);
-
         let round1_secret_package = self
             .round1_secret_package
             .take()
             .ok_or(DkgError::InvalidStateTransition)?;
+        round1_packages.remove(round1_secret_package.identifier());
         let (round2_secret_package, round2_packages) =
             dkg::part2(round1_secret_package, &round1_packages)?;
 
@@ -347,8 +335,8 @@ impl<C: Ciphersuite> Participant<C> {
             .take()
             .ok_or(DkgError::InvalidStateTransition)?;
 
-        if round1_packages.len() != (self.max_signers - 1) as usize {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        if round1_packages.len() != (round2_secret_package.max_signers() - 1) as usize {
+            return Err(Error::Frost(FrostError::IncorrectNumberOfPackages));
         }
         if round1_packages.len() != round2_packages.len() {
             return Err(Error::Frost(FrostError::IncorrectNumberOfPackages));
@@ -361,6 +349,7 @@ impl<C: Ciphersuite> Participant<C> {
         }
 
         let mut round2_culprits_set = BTreeSet::new();
+        let mut signing_share = <<C::Group as Group>::Field>::zero();
 
         for (sender_identifier, round2_package) in round2_packages.iter() {
             let ell = *sender_identifier;
@@ -371,11 +360,17 @@ impl<C: Ciphersuite> Participant<C> {
                 .ok_or(FrostError::PackageNotFound)?
                 .commitment();
 
-            let secret_share = SecretShare::new(self.identifier, f_ell_i, commitment.clone());
+            let secret_share = SecretShare::new(
+                *round2_secret_package.identifier(),
+                f_ell_i,
+                commitment.clone(),
+            );
 
-            if let Err(FrostError::InvalidSecretShare) = secret_share.verify() {
+            if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
                 round2_culprits_set.insert(ell);
             }
+
+            signing_share = signing_share + f_ell_i.to_scalar();
         }
 
         if !round2_culprits_set.is_empty() {
@@ -383,8 +378,28 @@ impl<C: Ciphersuite> Participant<C> {
             return Err(Error::Dkg(DkgError::InvalidSecretShares));
         }
 
-        let (key_package, public_key_package) =
-            dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)?;
+        signing_share = signing_share + *round2_secret_package.secret_share();
+        let signing_share = SigningShare::new(signing_share);
+
+        let verifying_share = signing_share.into();
+
+        let commitments: BTreeMap<_, _> = round1_packages
+            .iter()
+            .map(|(id, package)| (*id, package.commitment()))
+            .chain(iter::once((
+                *round2_secret_package.identifier(),
+                round2_secret_package.commitment(),
+            )))
+            .collect();
+        let public_key_package = PublicKeyPackage::from_dkg_commitments(&commitments)?;
+
+        let key_package = KeyPackage::new(
+            *round2_secret_package.identifier(),
+            signing_share,
+            verifying_share,
+            *public_key_package.verifying_key(),
+            *round2_secret_package.min_signers(),
+        );
 
         Ok((key_package, public_key_package))
     }

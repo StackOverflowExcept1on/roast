@@ -245,7 +245,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 [[package]]
 name = "frost-core"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "byteorder",
  "const-crc32-nostd",
@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "frost-ed25519"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -279,7 +279,7 @@ dependencies = [
 [[package]]
 name = "frost-ed448"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "document-features",
  "ed448-goldilocks",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "frost-p256"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "document-features",
  "frost-core",
@@ -305,7 +305,7 @@ dependencies = [
 [[package]]
 name = "frost-rerandomized"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "derive-getters",
  "document-features",
@@ -317,7 +317,7 @@ dependencies = [
 [[package]]
 name = "frost-ristretto255"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -330,7 +330,7 @@ dependencies = [
 [[package]]
 name = "frost-secp256k1"
 version = "2.0.0-rc.0"
-source = "git+https://github.com/ZcashFoundation/frost?branch=expose-verify-signature-share#ff41fd6e5735bd1091066d69599f3898ada1b813"
+source = "git+https://github.com/StackOverflowExcept1on/frost?branch=roast#959dbfaedd051b31a006b418991071f6c52b0534"
 dependencies = [
  "document-features",
  "frost-core",

@@ -5,8 +5,10 @@ use alloc::{
 };
 use core::mem;
 use frost_core::{
-    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
-    Identifier, Signature, SigningPackage,
+    keys::{self, PublicKeyPackage},
+    round1::SigningCommitments,
+    round2::SignatureShare,
+    Ciphersuite, Identifier, Signature, SigningPackage,
 };
 
 type SessionId = u16;
@@ -61,19 +63,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
     ) -> Result<Self, Error<C>> {
-        // TODO: https://github.com/ZcashFoundation/frost/issues/736
-
-        if min_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
-
-        if max_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMaxSigners));
-        }
-
-        if min_signers > max_signers {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
+        keys::validate_num_of_signers(min_signers, max_signers)?;
 
         Ok(Self {
             max_signers,
