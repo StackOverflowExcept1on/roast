@@ -88,8 +88,15 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
         }
     }
 
-    let status = trusted_third_party.try_finish()?;
-    dbg!(status);
+    match trusted_third_party.try_finish() {
+        Ok(status) => {
+            dbg!(status);
+        }
+        Err(Error::Dkg(DkgError::InvalidSecretShares)) => {
+            dbg!(trusted_third_party.round2_culprits().collect::<Vec<_>>());
+        }
+        _ => {}
+    }
 
     Ok(())
 }

@@ -317,7 +317,6 @@ impl<C: Ciphersuite> Participant<C> {
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     ) -> Result<BTreeMap<Identifier<C>, round2::Package<C>>, Error<C>> {
-        // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
         round1_packages.remove(&self.identifier);
 
         let round1_secret_package = self
@@ -348,7 +347,6 @@ impl<C: Ciphersuite> Participant<C> {
             .take()
             .ok_or(DkgError::InvalidStateTransition)?;
 
-        // TODO: if round1_packages.len() != (round2_secret_package.max_signers() - 1) as usize {
         if round1_packages.len() != (self.max_signers - 1) as usize {
             return Err(Error::Frost(FrostError::InvalidMinSigners));
         }
@@ -373,7 +371,6 @@ impl<C: Ciphersuite> Participant<C> {
                 .ok_or(FrostError::PackageNotFound)?
                 .commitment();
 
-            // TODO: let secret_share = SecretShare::new(round2_secret_package.identifier(), f_ell_i, commitment.clone());
             let secret_share = SecretShare::new(self.identifier, f_ell_i, commitment.clone());
 
             if let Err(FrostError::InvalidSecretShare) = secret_share.verify() {
@@ -392,7 +389,7 @@ impl<C: Ciphersuite> Participant<C> {
         Ok((key_package, public_key_package))
     }
 
-    /// TODO.
+    /// Returns the round2 culprits.
     pub fn round2_culprits(&self) -> Result<BTreeSet<Identifier<C>>, Error<C>> {
         let round2_culprits_set = self
             .round2_culprits_set
