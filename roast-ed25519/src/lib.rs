@@ -11,11 +11,28 @@ mod coordinator {
     pub type Coordinator = roast_core::Coordinator<frost_ed25519::Ed25519Sha512>;
 }
 
-mod error {
-    pub use roast_core::MaliciousSignerError;
+pub mod dkg {
+    //! Distributed Key Generation types.
+
+    pub use roast_core::dkg::DkgStatus;
+
+    /// Represents dealer that can be used for Distributed Key Generation.
+    pub type Dealer = roast_core::dkg::Dealer<frost_ed25519::Ed25519Sha512>;
+
+    /// Represents participant of Distributed Key Generation.
+    pub type Participant = roast_core::dkg::Participant<frost_ed25519::Ed25519Sha512>;
+}
+
+pub mod error {
+    //! Error types.
+
+    /// Represents all possible errors that can occur in FROST protocol.
+    pub type FrostError = roast_core::error::FrostError<frost_ed25519::Ed25519Sha512>;
+
+    pub use roast_core::error::{DkgError, MaliciousSignerError, RoastError};
 
     /// Represents all possible errors that can occur.
-    pub type Error = roast_core::Error<frost_ed25519::Ed25519Sha512>;
+    pub type Error = roast_core::error::Error<frost_ed25519::Ed25519Sha512>;
 }
 
 mod signer {
@@ -26,5 +43,4 @@ mod signer {
 pub use frost_ed25519 as frost;
 
 pub use coordinator::*;
-pub use error::*;
 pub use signer::*;

@@ -1,12 +1,14 @@
-use crate::{Error, MaliciousSignerError};
+use crate::error::{Error, FrostError, MaliciousSignerError, RoastError};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
 };
 use core::mem;
 use frost_core::{
-    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
-    Error as FrostError, Identifier, Signature, SigningPackage,
+    keys::{self, PublicKeyPackage},
+    round1::SigningCommitments,
+    round2::SignatureShare,
+    Ciphersuite, Identifier, Signature, SigningPackage,
 };
 
 type SessionId = u16;
@@ -43,6 +45,7 @@ pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
     public_key_package: PublicKeyPackage<C>,
+    // TODO: make 2 versions of coordinator (coordinator and coordinator-signer)
     message: Vec<u8>,
     responsive_signers: BTreeSet<Identifier<C>>,
     malicious_signers: BTreeMap<Identifier<C>, MaliciousSignerError>,
@@ -60,17 +63,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
     ) -> Result<Self, Error<C>> {
-        if min_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
-
-        if max_signers < 2 {
-            return Err(Error::Frost(FrostError::InvalidMaxSigners));
-        }
-
-        if min_signers > max_signers {
-            return Err(Error::Frost(FrostError::InvalidMinSigners));
-        }
+        keys::validate_num_of_signers(min_signers, max_signers)?;
 
         Ok(Self {
             max_signers,
@@ -107,11 +100,14 @@ impl<C: Ciphersuite> Coordinator<C> {
         signing_commitments: SigningCommitments<C>,
     ) -> Result<SessionStatus<C>, Error<C>> {
         if let Some(err) = self.malicious_signers.get(&identifier).copied() {
-            return Err(Error::MaliciousSigner(err));
+            return Err(Error::Roast(RoastError::MaliciousSigner(err)));
         }
 
         if self.responsive_signers.contains(&identifier) {
-            return Err(self.mark_malicious(identifier, MaliciousSignerError::UnsolicitedReply));
+            return Err(Error::Roast(self.mark_malicious(
+                identifier,
+                MaliciousSignerError::UnsolicitedReply,
+            )));
         }
 
         if let Some(Session {
@@ -123,9 +119,10 @@ impl<C: Ciphersuite> Coordinator<C> {
             .and_then(|session_id| self.session.get_mut(session_id))
         {
             let Some(signature_share) = signature_share else {
-                return Err(
-                    self.mark_malicious(identifier, MaliciousSignerError::InvalidSignatureShare)
-                );
+                return Err(Error::Roast(self.mark_malicious(
+                    identifier,
+                    MaliciousSignerError::InvalidSignatureShare,
+                )));
             };
 
             let verification_result = (|| -> Result<(), FrostError<C>> {
@@ -146,9 +143,10 @@ impl<C: Ciphersuite> Coordinator<C> {
             })();
 
             if verification_result.is_err() {
-                return Err(
-                    self.mark_malicious(identifier, MaliciousSignerError::InvalidSignatureShare)
-                );
+                return Err(Error::Roast(self.mark_malicious(
+                    identifier,
+                    MaliciousSignerError::InvalidSignatureShare,
+                )));
             }
 
             signature_shares.insert(identifier, signature_share);
@@ -207,22 +205,22 @@ impl<C: Ciphersuite> Coordinator<C> {
     }
 
     /// Marks the signer as malicious with the given [`MaliciousSignerError`]
-    /// and returns this error as [`Error::MaliciousSigner`].
+    /// and returns this error as [`RoastError::MaliciousSigner`].
     ///
     /// If the number of malicious signers exceeds the threshold, returns
-    /// [`Error::TooManyMaliciousSigners`].
+    /// [`RoastError::TooManyMaliciousSigners`].
     fn mark_malicious(
         &mut self,
         identifier: Identifier<C>,
         malicious_signer_error: MaliciousSignerError,
-    ) -> Error<C> {
+    ) -> RoastError {
         self.malicious_signers
             .insert(identifier, malicious_signer_error);
 
         if self.malicious_signers.len() > (self.max_signers - self.min_signers) as usize {
-            return Error::TooManyMaliciousSigners;
+            return RoastError::TooManyMaliciousSigners;
         }
 
-        Error::MaliciousSigner(malicious_signer_error)
+        RoastError::MaliciousSigner(malicious_signer_error)
     }
 }
