@@ -1,6 +1,6 @@
 //! Distributed Key Generation types.
 
-use crate::error::{DistributedKeyGenerationError, Error, FrostError};
+use crate::error::{DkgError, Error, FrostError};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
@@ -16,13 +16,15 @@ use rand_core::{CryptoRng, RngCore};
 
 /// Represents all possible Distributed Key Generation statuses.
 #[derive(Debug)]
-pub enum DistributedKeyGenerationStatus {
+pub enum DkgStatus {
     /// Distributed Key Generation still in progress.
     InProgress,
     /// Finished round1 of Distributed Key Generation.
     FinishedRound1,
     /// Finished round2 of Distributed Key Generation.
     FinishedRound2,
+    /// Finished round3 of Distributed Key Generation.
+    FinishedRound3,
 }
 
 /// Represents trusted third party that can be used for Distributed Key
@@ -62,9 +64,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
 
         let participants_set = BTreeSet::from_iter(participants.clone());
         if participants_set.len() != participants.len() {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::DuplicateParticipants,
-            ));
+            return Err(Error::Dkg(DkgError::DuplicateParticipants));
         }
 
         Ok(Self {
@@ -113,11 +113,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &mut self,
         identifier: Identifier<C>,
         round1_package: round1::Package<C>,
-    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
+    ) -> Result<DkgStatus, Error<C>> {
         if !self.participants_set.contains(&identifier) {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::UnknownParticipant,
-            ));
+            return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
         if round1_package.commitment().coefficients().len() != self.min_signers as usize {
@@ -133,10 +131,10 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         self.round1_packages.insert(identifier, round1_package);
 
         if self.round1_packages.len() == self.max_signers as usize {
-            return Ok(DistributedKeyGenerationStatus::FinishedRound1);
+            return Ok(DkgStatus::FinishedRound1);
         }
 
-        Ok(DistributedKeyGenerationStatus::InProgress)
+        Ok(DkgStatus::InProgress)
     }
 
     /// Returns an iterator of participants who have not sent their round1
@@ -153,11 +151,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &mut self,
         identifier: Identifier<C>,
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
-    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
+    ) -> Result<DkgStatus, Error<C>> {
         if !self.participants_set.contains(&identifier) {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::UnknownParticipant,
-            ));
+            return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
         if round2_packages.len() != (self.max_signers - 1) as usize {
@@ -183,10 +179,10 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         self.round2_participants_set.insert(identifier);
 
         if self.round2_participants_set.len() == self.max_signers as usize {
-            return Ok(DistributedKeyGenerationStatus::FinishedRound2);
+            return Ok(DkgStatus::FinishedRound2);
         }
 
-        Ok(DistributedKeyGenerationStatus::InProgress)
+        Ok(DkgStatus::InProgress)
     }
 
     /// Returns an iterator of participants who have not sent their round2
@@ -214,11 +210,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
         &mut self,
         identifier: Identifier<C>,
         round2_culprits: BTreeSet<Identifier<C>>,
-    ) -> Result<DistributedKeyGenerationStatus, Error<C>> {
+    ) -> Result<DkgStatus, Error<C>> {
         if !self.participants_set.contains(&identifier) {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::UnknownParticipant,
-            ));
+            return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
         if self
@@ -227,9 +221,7 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             .filter(|id| identifier.ne(id))
             .any(|id| !round2_culprits.contains(id))
         {
-            return Err(Error::Dkg(
-                DistributedKeyGenerationError::UnknownParticipant,
-            ));
+            return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
         if let Some(round2_packages) = self.round2_packages.get(&identifier) {
@@ -253,12 +245,21 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             }
         }
 
-        Ok(DistributedKeyGenerationStatus::InProgress)
+        Ok(DkgStatus::InProgress)
     }
 
     /// Returns an iterator of participants who sent an invalid round2 package.
     pub fn round2_culprits(&self) -> impl Iterator<Item = Identifier<C>> + '_ {
         self.round2_culprits_set.iter().copied()
+    }
+
+    /// Tries to finish the Distributed Key Generation process.
+    pub fn try_finish(&self) -> Result<DkgStatus, Error<C>> {
+        if !self.round2_culprits_set.is_empty() {
+            return Err(Error::Dkg(DkgError::InvalidSecretShares));
+        }
+
+        Ok(DkgStatus::FinishedRound3)
     }
 }
 

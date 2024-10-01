@@ -14,7 +14,7 @@ mod coordinator {
 pub mod dkg {
     //! Distributed Key Generation types.
 
-    pub use roast_core::dkg::DistributedKeyGenerationStatus;
+    pub use roast_core::dkg::DkgStatus;
 
     /// Represents trusted third party that can be used for Distributed Key
     /// Generation.
@@ -30,12 +30,7 @@ pub mod error {
     /// Represents all possible errors that can occur in FROST protocol.
     pub type FrostError = roast_core::error::FrostError<frost_ed25519::Ed25519Sha512>;
 
-    pub use roast_core::error::{MaliciousSignerError, RoastError};
-
-    /// Represents all possible errors that can occur in Distributed Key
-    /// Generation.
-    pub type DistributedKeyGenerationError =
-        roast_core::error::DistributedKeyGenerationError<frost_ed25519::Ed25519Sha512>;
+    pub use roast_core::error::{DkgError, MaliciousSignerError, RoastError};
 
     /// Represents all possible errors that can occur.
     pub type Error = roast_core::error::Error<frost_ed25519::Ed25519Sha512>;

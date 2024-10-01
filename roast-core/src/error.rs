@@ -1,7 +1,6 @@
 //! Error types.
 
-use alloc::collections::BTreeSet;
-use frost_core::{Ciphersuite, Identifier};
+use frost_core::Ciphersuite;
 #[cfg(feature = "std")]
 use thiserror::Error;
 #[cfg(not(feature = "std"))]
@@ -11,7 +10,7 @@ use thiserror_nostd_notrait::Error;
 pub type FrostError<C> = frost_core::Error<C>;
 
 /// Represents all possible errors for which signer can be marked as malicious.
-#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum MaliciousSignerError {
     /// Signer unsolicitedly replied to coordinator.
     #[error("Unsolicited reply")]
@@ -22,7 +21,7 @@ pub enum MaliciousSignerError {
 }
 
 /// Represents all possible errors that can occur in ROAST protocol.
-#[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum RoastError {
     /// Malicious signer.
     #[error("Malicious signer: {0}")]
@@ -33,8 +32,8 @@ pub enum RoastError {
 }
 
 /// Represents all possible errors that can occur in Distributed Key Generation.
-#[derive(Error, Debug, Clone, Eq, PartialEq)]
-pub enum DistributedKeyGenerationError<C: Ciphersuite> {
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+pub enum DkgError {
     /// Duplicate participants.
     #[error("Duplicate participants")]
     DuplicateParticipants,
@@ -43,22 +42,19 @@ pub enum DistributedKeyGenerationError<C: Ciphersuite> {
     UnknownParticipant,
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
-    InvalidSecretShares {
-        /// Set of participants with invalid secret shares.
-        culprits: BTreeSet<Identifier<C>>,
-    },
+    InvalidSecretShares,
 }
 
 /// Represents all possible errors that can occur.
-#[derive(Error, Debug, Clone, Eq, PartialEq)]
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
     Frost(#[from] FrostError<C>),
+    /// Error in Distributed Key Generation.
+    #[error("DKG error: {0}")]
+    Dkg(#[from] DkgError),
     /// Error in ROAST protocol.
     #[error("ROAST error: {0}")]
     Roast(#[from] RoastError),
-    /// Error in Distributed Key Generation.
-    #[error("DKG error: {0}")]
-    Dkg(#[from] DistributedKeyGenerationError<C>),
 }
