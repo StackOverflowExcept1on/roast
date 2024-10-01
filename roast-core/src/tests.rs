@@ -34,7 +34,7 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
 
     for participant in participants.iter_mut() {
         let status = trusted_third_party
-            .receive_round1_package(participant.identifier(), participant.round1_package())?;
+            .receive_round1_package(participant.identifier(), participant.round1_package()?)?;
         dbg!(trusted_third_party
             .blame_round1_participants()
             .collect::<Vec<_>>());
@@ -53,18 +53,20 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     }
 
     for participant in participants.iter_mut() {
-        let round1_packages = trusted_third_party.round1_packages().clone();
         if let Some(round2_packages) = trusted_third_party
             .round2_packages(participant.identifier())
             .cloned()
         {
             let (key_package, public_key_package) =
-                participant.receive_round2_packages(round1_packages, round2_packages)?;
+                participant.receive_round2_packages(round2_packages)?;
             dbg!(key_package, public_key_package);
         }
     }
 
     // TODO: trusted_third_party.receive_round2_culprits()?;
+
+    let status = trusted_third_party.try_finish()?;
+    dbg!(status);
 
     Ok(())
 }

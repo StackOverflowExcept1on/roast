@@ -266,14 +266,12 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
 /// Represents participant of Distributed Key Generation.
 #[derive(Debug)]
 pub struct Participant<C: Ciphersuite> {
-    identifier: Identifier<C>,
-    // TODO: ^ remove identifier, https://github.com/ZcashFoundation/frost/issues/737
-    round1_secret_package: round1::SecretPackage<C>,
-    round1_package: round1::Package<C>,
-    // TODO: ^ maybe group into one Option<T> to use .take()
+    identifier: Identifier<C>, // TODO: https://github.com/ZcashFoundation/frost/issues/737
+    round1_secret_package: Option<round1::SecretPackage<C>>,
+    round1_package: Option<round1::Package<C>>,
     round2_secret_package: Option<round2::SecretPackage<C>>,
     round2_packages: Option<BTreeMap<Identifier<C>, round2::Package<C>>>,
-    // TODO: ^ maybe group into one Option<T>
+    round1_packages: Option<BTreeMap<Identifier<C>, round1::Package<C>>>,
 }
 
 impl<C: Ciphersuite> Participant<C> {
@@ -289,10 +287,11 @@ impl<C: Ciphersuite> Participant<C> {
 
         Ok(Self {
             identifier,
-            round1_secret_package,
-            round1_package,
+            round1_secret_package: Some(round1_secret_package),
+            round1_package: Some(round1_package),
             round2_secret_package: None,
             round2_packages: None,
+            round1_packages: None,
         })
     }
 
@@ -303,11 +302,15 @@ impl<C: Ciphersuite> Participant<C> {
 
     /// Returns the [`round1::Package<C>`], i.e. the public part of
     /// [`round1::SecretPackage<C>`] that is used for the first round of DKG.
-    pub fn round1_package(&self) -> round1::Package<C> {
-        self.round1_package.clone()
+    pub fn round1_package(&mut self) -> Result<round1::Package<C>, Error<C>> {
+        let round1_package = self
+            .round1_package
+            .take()
+            .ok_or(DkgError::InvalidStateTransition)?;
+        Ok(round1_package)
     }
 
-    /// TODO.
+    /// Receives `round1_packages` from the trusted third party.
     pub fn receive_round1_packages(
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
@@ -315,33 +318,36 @@ impl<C: Ciphersuite> Participant<C> {
         // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
         round1_packages.remove(&self.identifier);
 
-        // TODO: consider using Option<T> for round1_secret_package (use .take())
+        let round1_secret_package = self
+            .round1_secret_package
+            .take()
+            .ok_or(DkgError::InvalidStateTransition)?;
         let (round2_secret_package, round2_packages) =
-            dkg::part2(self.round1_secret_package.clone(), &round1_packages)?;
+            dkg::part2(round1_secret_package, &round1_packages)?;
 
         self.round2_secret_package = Some(round2_secret_package);
         self.round2_packages = Some(round2_packages.clone());
+        self.round1_packages = Some(round1_packages);
 
         Ok(round2_packages)
     }
 
-    /// TODO.
+    /// Receives `round2_packages` from the trusted third party.
     pub fn receive_round2_packages(
         &mut self,
-        mut round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     ) -> Result<(KeyPackage<C>, PublicKeyPackage<C>), Error<C>> {
-        let Some(round2_secret_package) = self.round2_secret_package.as_ref() else {
-            // TODO: handle this in a better way
-            panic!("round2_secret_package is None");
-        };
-
-        // TODO: round1_packages.remove(&self.round1_secret_package.identifier());
-        round1_packages.remove(&self.identifier);
-        // TODO: ^ maybe store this in a field as Option<T>
+        let round2_secret_package = self
+            .round2_secret_package
+            .take()
+            .ok_or(DkgError::InvalidStateTransition)?;
+        let round1_packages = self
+            .round1_packages
+            .take()
+            .ok_or(DkgError::InvalidStateTransition)?;
 
         let (key_package, public_key_package) =
-            dkg::part3(round2_secret_package, &round1_packages, &round2_packages)?;
+            dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)?;
 
         Ok((key_package, public_key_package))
     }

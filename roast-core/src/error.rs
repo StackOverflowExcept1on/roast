@@ -43,6 +43,9 @@ pub enum DkgError {
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
     InvalidSecretShares,
+    /// Invalid state transition.
+    #[error("Invalid state transition")]
+    InvalidStateTransition,
 }
 
 /// Represents all possible errors that can occur.
