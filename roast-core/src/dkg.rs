@@ -215,11 +215,9 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
             return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
-        if self
-            .participants
+        if round2_culprits
             .iter()
-            .filter(|id| identifier.ne(id))
-            .any(|id| !round2_culprits.contains(id))
+            .any(|id| !self.participants_set.contains(id))
         {
             return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
@@ -266,12 +264,14 @@ impl<C: Ciphersuite> TrustedThirdParty<C> {
 /// Represents participant of Distributed Key Generation.
 #[derive(Debug)]
 pub struct Participant<C: Ciphersuite> {
-    identifier: Identifier<C>, // TODO: https://github.com/ZcashFoundation/frost/issues/737
+    identifier: Identifier<C>,
+    max_signers: u16, // TODO: https://github.com/ZcashFoundation/frost/issues/737
     round1_secret_package: Option<round1::SecretPackage<C>>,
     round1_package: Option<round1::Package<C>>,
     round2_secret_package: Option<round2::SecretPackage<C>>,
     round2_packages: Option<BTreeMap<Identifier<C>, round2::Package<C>>>,
     round1_packages: Option<BTreeMap<Identifier<C>, round1::Package<C>>>,
+    round2_culprits_set: Option<BTreeSet<Identifier<C>>>,
 }
 
 impl<C: Ciphersuite> Participant<C> {
@@ -287,11 +287,13 @@ impl<C: Ciphersuite> Participant<C> {
 
         Ok(Self {
             identifier,
+            max_signers,
             round1_secret_package: Some(round1_secret_package),
             round1_package: Some(round1_package),
             round2_secret_package: None,
             round2_packages: None,
             round1_packages: None,
+            round2_culprits_set: None,
         })
     }
 
@@ -346,9 +348,56 @@ impl<C: Ciphersuite> Participant<C> {
             .take()
             .ok_or(DkgError::InvalidStateTransition)?;
 
+        // TODO: if round1_packages.len() != (round2_secret_package.max_signers() - 1) as usize {
+        if round1_packages.len() != (self.max_signers - 1) as usize {
+            return Err(Error::Frost(FrostError::InvalidMinSigners));
+        }
+        if round1_packages.len() != round2_packages.len() {
+            return Err(Error::Frost(FrostError::IncorrectNumberOfPackages));
+        }
+        if round1_packages
+            .keys()
+            .any(|id| !round2_packages.contains_key(id))
+        {
+            return Err(Error::Frost(FrostError::IncorrectPackage));
+        }
+
+        let mut round2_culprits_set = BTreeSet::new();
+
+        for (sender_identifier, round2_package) in round2_packages.iter() {
+            let ell = *sender_identifier;
+            let f_ell_i = *round2_package.signing_share();
+
+            let commitment = round1_packages
+                .get(&ell)
+                .ok_or(FrostError::PackageNotFound)?
+                .commitment();
+
+            // TODO: let secret_share = SecretShare::new(round2_secret_package.identifier(), f_ell_i, commitment.clone());
+            let secret_share = SecretShare::new(self.identifier, f_ell_i, commitment.clone());
+
+            if let Err(FrostError::InvalidSecretShare) = secret_share.verify() {
+                round2_culprits_set.insert(ell);
+            }
+        }
+
+        if !round2_culprits_set.is_empty() {
+            self.round2_culprits_set = Some(round2_culprits_set);
+            return Err(Error::Dkg(DkgError::InvalidSecretShares));
+        }
+
         let (key_package, public_key_package) =
             dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)?;
 
         Ok((key_package, public_key_package))
+    }
+
+    /// TODO.
+    pub fn round2_culprits(&self) -> Result<BTreeSet<Identifier<C>>, Error<C>> {
+        let round2_culprits_set = self
+            .round2_culprits_set
+            .clone()
+            .ok_or(DkgError::InvalidStateTransition)?;
+        Ok(round2_culprits_set)
     }
 }

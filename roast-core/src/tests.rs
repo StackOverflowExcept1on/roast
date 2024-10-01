@@ -1,5 +1,6 @@
 //! Test cases.
 
+use crate::error::DkgError;
 use crate::{
     dkg::{Participant, TrustedThirdParty},
     error::{Error, RoastError},
@@ -10,7 +11,11 @@ use crate::{
     Coordinator, SessionStatus, Signer,
 };
 use alloc::collections::BTreeMap;
-use frost_core::{round2::SignatureShare, Field, Group};
+use frost_core::{
+    keys::{dkg::round2, SigningShare},
+    round2::SignatureShare,
+    Field, Group,
+};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
 /// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
@@ -41,9 +46,20 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
         dbg!(status);
     }
 
+    let mut flag = false;
+
     for participant in participants.iter_mut() {
-        let round2_packages =
+        let mut round2_packages =
             participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
+
+        if !flag {
+            if let Some((_, round2_package)) = round2_packages.iter_mut().next() {
+                let zero = <<C::Group as Group>::Field as Field>::zero();
+                *round2_package = round2::Package::new(SigningShare::new(zero));
+            }
+            flag = true;
+        }
+
         let status = trusted_third_party
             .receive_round2_packages(participant.identifier(), round2_packages)?;
         dbg!(trusted_third_party
@@ -57,13 +73,20 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
             .round2_packages(participant.identifier())
             .cloned()
         {
-            let (key_package, public_key_package) =
-                participant.receive_round2_packages(round2_packages)?;
-            dbg!(key_package, public_key_package);
+            match participant.receive_round2_packages(round2_packages) {
+                Ok((key_package, public_key_package)) => {
+                    dbg!(key_package, public_key_package);
+                }
+                Err(Error::Dkg(DkgError::InvalidSecretShares)) => {
+                    trusted_third_party.receive_round2_culprits(
+                        participant.identifier(),
+                        participant.round2_culprits()?,
+                    )?;
+                }
+                _ => {}
+            }
         }
     }
-
-    // TODO: trusted_third_party.receive_round2_culprits()?;
 
     let status = trusted_third_party.try_finish()?;
     dbg!(status);
