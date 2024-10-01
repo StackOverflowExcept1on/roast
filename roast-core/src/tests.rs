@@ -11,11 +11,7 @@ use crate::{
     Coordinator, SessionStatus, Signer,
 };
 use alloc::collections::BTreeMap;
-use frost_core::{
-    keys::{dkg::round2, SigningShare},
-    round2::SignatureShare,
-    Field, Group,
-};
+use frost_core::{round2::SignatureShare, Field, Group};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
 /// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
@@ -38,35 +34,25 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     let mut trusted_third_party = TrustedThirdParty::new(max_signers, min_signers, identifiers)?;
 
     for participant in participants.iter_mut() {
-        let status = trusted_third_party
+        trusted_third_party
             .receive_round1_package(participant.identifier(), participant.round1_package()?)?;
-        dbg!(trusted_third_party
-            .blame_round1_participants()
-            .collect::<Vec<_>>());
-        dbg!(status);
     }
 
-    let mut flag = false;
+    assert!(trusted_third_party
+        .blame_round1_participants()
+        .next()
+        .is_none());
 
     for participant in participants.iter_mut() {
-        let mut round2_packages =
+        let round2_packages =
             participant.receive_round1_packages(trusted_third_party.round1_packages().clone())?;
-
-        if !flag {
-            if let Some((_, round2_package)) = round2_packages.iter_mut().next() {
-                let zero = <<C::Group as Group>::Field as Field>::zero();
-                *round2_package = round2::Package::new(SigningShare::new(zero));
-            }
-            flag = true;
-        }
-
-        let status = trusted_third_party
-            .receive_round2_packages(participant.identifier(), round2_packages)?;
-        dbg!(trusted_third_party
-            .blame_round2_participants()
-            .collect::<Vec<_>>());
-        dbg!(status);
+        trusted_third_party.receive_round2_packages(participant.identifier(), round2_packages)?;
     }
+
+    assert!(trusted_third_party
+        .blame_round2_participants()
+        .next()
+        .is_none());
 
     for participant in participants.iter_mut() {
         if let Some(round2_packages) = trusted_third_party
@@ -74,29 +60,25 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
             .cloned()
         {
             match participant.receive_round2_packages(round2_packages) {
-                Ok((key_package, public_key_package)) => {
-                    dbg!(key_package, public_key_package);
+                Ok((_key_package, public_key_package)) => {
+                    assert_eq!(
+                        public_key_package,
+                        trusted_third_party.public_key_package()?
+                    );
                 }
-                Err(Error::Dkg(DkgError::InvalidSecretShares)) => {
-                    trusted_third_party.receive_round2_culprits(
-                        participant.identifier(),
-                        participant.round2_culprits()?,
-                    )?;
+                Err(err) => {
+                    if let Error::Dkg(DkgError::InvalidSecretShares) = err {
+                        trusted_third_party.receive_round2_culprits(
+                            participant.identifier(),
+                            participant.round2_culprits()?,
+                        )?;
+                    }
                 }
-                _ => {}
             }
         }
     }
 
-    match trusted_third_party.try_finish() {
-        Ok(status) => {
-            dbg!(status);
-        }
-        Err(Error::Dkg(DkgError::InvalidSecretShares)) => {
-            dbg!(trusted_third_party.round2_culprits().collect::<Vec<_>>());
-        }
-        _ => {}
-    }
+    trusted_third_party.try_finish()?;
 
     Ok(())
 }
