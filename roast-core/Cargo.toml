@@ -17,6 +17,8 @@ rand = { workspace = true, optional = true }
 rand_core.workspace = true
 thiserror-nostd-notrait.workspace = true
 thiserror = { workspace = true, optional = true }
+parity-scale-codec = { version = "3.6", features = ["derive"], default-features = false, optional = true }
+scale-info = { version = "2.5", features = ["derive"], default-features = false, optional = true }
 
 [features]
 default = ["serialization", "cheater-detection", "std"]
@@ -27,8 +29,10 @@ std = ["dep:thiserror"]
 ## can use `serde` to serialize structs with any encoder that supports
 ## `serde` (e.g. JSON with `serde_json`).
 serde = ["frost-core/serde"]
-## Enable a default serialization format. Enables `serde`.
-serialization = ["frost-core/serialization"]
+## Enable `parity-scale-codec` and `scale-info` support for types that need to be communicated.
+codec = ["frost-core/codec", "dep:parity-scale-codec", "dep:scale-info"]
+## Enable a default serialization format. Enables `serde` and `codec`.
+serialization = ["frost-core/serialization", "serde", "codec"]
 ## Exposes ciphersuite-generic tests for other crates to use.
 test-impl = ["dep:rand"]
 ## Enable cheater detection.

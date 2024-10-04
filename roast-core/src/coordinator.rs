@@ -10,6 +10,11 @@ use frost_core::{
     round2::SignatureShare,
     Ciphersuite, Identifier, Signature, SigningPackage,
 };
+#[cfg(feature = "codec")]
+use scale_info::{
+    scale::{self, Decode, Encode},
+    TypeInfo,
+};
 
 type SessionId = u16;
 
@@ -21,6 +26,7 @@ struct Session<C: Ciphersuite> {
 
 /// Represents all possible session statuses.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(TypeInfo, Encode, Decode), codec(crate = scale))]
 pub enum SessionStatus<C: Ciphersuite> {
     /// Session still in progress.
     InProgress,
@@ -41,6 +47,7 @@ pub enum SessionStatus<C: Ciphersuite> {
 
 /// Represents coordinator.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(TypeInfo, Encode, Decode), codec(crate = scale))]
 pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,

@@ -15,9 +15,15 @@ use frost_core::{
     Ciphersuite, Field, Group, Identifier,
 };
 use rand_core::{CryptoRng, RngCore};
+#[cfg(feature = "codec")]
+use scale_info::{
+    scale::{self, Decode, Encode},
+    TypeInfo,
+};
 
 /// Represents all possible Distributed Key Generation statuses.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(TypeInfo, Encode, Decode), codec(crate = scale))]
 pub enum DkgStatus {
     /// Distributed Key Generation still in progress.
     InProgress,
@@ -31,6 +37,7 @@ pub enum DkgStatus {
 
 /// Represents dealer that can be used for Distributed Key Generation.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(TypeInfo, Encode, Decode), codec(crate = scale))]
 pub struct Dealer<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,
