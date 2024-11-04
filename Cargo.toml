@@ -7,6 +7,7 @@ members = [
     "roast-p256",
     "roast-ristretto255",
     "roast-secp256k1",
+    "roast-secp256k1-evm",
 ]
 
 [workspace.package]
@@ -20,12 +21,13 @@ categories = ["cryptography"]
 
 [workspace.dependencies]
 document-features = "0.2"
-frost-core = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", features = ["internals"], default-features = false }
-frost-ed25519 = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", default-features = false }
-frost-ed448 = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", default-features = false }
-frost-p256 = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", default-features = false }
-frost-ristretto255 = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", default-features = false }
-frost-secp256k1 = { git = "https://github.com/StackOverflowExcept1on/frost", branch = "roast", default-features = false }
+frost-core = { version = "2.0.0", features = ["internals"], default-features = false }
+frost-ed25519 = { version = "2.0.0", default-features = false }
+frost-ed448 = { version = "2.0.0", default-features = false }
+frost-p256 = { version = "2.0.0", default-features = false }
+frost-ristretto255 = { version = "2.0.0", default-features = false }
+frost-secp256k1 = { version = "2.0.0", default-features = false }
+frost-secp256k1-evm = { version = "2.0.0", default-features = false }
 rand = { version = "0.8", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 thiserror-nostd-notrait = { version = "1.0", default-features = false }
