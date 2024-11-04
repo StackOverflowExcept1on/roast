@@ -37,6 +37,7 @@ pub struct Dealer<C: Ciphersuite> {
     participants: Vec<Identifier<C>>,
     participants_set: BTreeSet<Identifier<C>>,
     round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+    // TODO: `round2::Package<C>` must be know only for receiver and sender
     round2_packages: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round2::Package<C>>>,
     round2_participants_set: BTreeSet<Identifier<C>>,
     round2_culprits_set: BTreeSet<Identifier<C>>,
