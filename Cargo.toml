@@ -39,3 +39,4 @@ roast-ed448 = { path = "roast-ed448", default-features = false }
 roast-p256 = { path = "roast-p256", default-features = false }
 roast-ristretto255 = { path = "roast-ristretto255", default-features = false }
 roast-secp256k1 = { path = "roast-secp256k1", default-features = false }
+roast-secp256k1-evm = { path = "roast-secp256k1-evm", default-features = false }

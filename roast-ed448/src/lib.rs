@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+// TODO: #![cfg_attr(not(feature = "std"), no_std)] (https://github.com/ZcashFoundation/frost/issues/769)
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 #![doc = document_features::document_features!()]
