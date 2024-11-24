@@ -14,6 +14,7 @@ categories.workspace = true
 document-features.workspace = true
 frost-ed448.workspace = true
 roast-core.workspace = true
+# TODO: replace `sha3` with something else to support dkg
 
 [dev-dependencies]
 roast-core = { workspace = true, features = ["test-impl"] }

@@ -5,7 +5,9 @@ use crate::{
     error::{DkgError, Error, RoastError},
     Coordinator, SessionStatus, Signer,
 };
+use aes::cipher::crypto_common::BlockSizeUser;
 use alloc::collections::BTreeMap;
+use digest::Digest;
 use frost_core::{
     keys::{self, IdentifierList, KeyPackage},
     round2::SignatureShare,
@@ -15,7 +17,11 @@ use rand::{seq::SliceRandom, CryptoRng, RngCore};
 
 /// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
 /// participants.
-pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
+pub fn test_dkg_basic<
+    C: Ciphersuite,
+    H: Clone + BlockSizeUser + Digest,
+    RNG: RngCore + CryptoRng,
+>(
     min_signers: u16,
     max_signers: u16,
     rng: &mut RNG,
@@ -26,11 +32,11 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     for participant_index in 1..=max_signers {
         let identifier = participant_index.try_into().expect("should be nonzero");
         identifiers.push(identifier);
-        let participant = Participant::new(identifier, max_signers, min_signers, rng)?;
+        let participant = Participant::<C, H>::new(identifier, max_signers, min_signers, rng)?;
         participants.push(participant);
     }
 
-    let mut dealer = Dealer::new(max_signers, min_signers, identifiers)?;
+    let mut dealer = Dealer::<C, H>::new(max_signers, min_signers, identifiers)?;
 
     for participant in participants.iter_mut() {
         dealer.receive_round1_package(participant.identifier(), participant.round1_package()?)?;
@@ -39,16 +45,19 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     assert!(dealer.blame_round1_participants().next().is_none());
 
     for participant in participants.iter_mut() {
-        let round2_packages =
+        let round2_packages_encrypted =
             participant.receive_round1_packages(dealer.round1_packages().clone())?;
-        dealer.receive_round2_packages(participant.identifier(), round2_packages)?;
+        dealer.receive_round2_packages(participant.identifier(), round2_packages_encrypted)?;
     }
 
     assert!(dealer.blame_round2_participants().next().is_none());
 
     for participant in participants.iter_mut() {
-        if let Some(round2_packages) = dealer.round2_packages(participant.identifier()).cloned() {
-            match participant.receive_round2_packages(round2_packages) {
+        if let Some(round2_packages_encrypted) = dealer
+            .round2_packages_encrypted(participant.identifier())
+            .cloned()
+        {
+            match participant.receive_round2_packages_encrypted(round2_packages_encrypted) {
                 Ok((_key_package, public_key_package)) => {
                     assert_eq!(public_key_package, dealer.public_key_package()?);
                 }
@@ -57,6 +66,7 @@ pub fn test_dkg_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                         dealer.receive_round2_culprits(
                             participant.identifier(),
                             participant.round2_culprits()?,
+                            participant.temp_secret_key(),
                         )?;
                     }
                 }

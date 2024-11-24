@@ -4,7 +4,7 @@ use roast_secp256k1_evm::{error::Error, frost::rand_core::OsRng};
 #[test]
 fn test_dkg_basic() -> Result<(), Error> {
     let mut rng = OsRng;
-    tests::test_dkg_basic(2, 3, &mut rng)?;
+    tests::test_dkg_basic::<_, sha3::Keccak256, _>(2, 3, &mut rng)?;
     Ok(())
 }
 

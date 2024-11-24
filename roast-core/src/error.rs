@@ -40,6 +40,9 @@ pub enum DkgError {
     /// Unknown participant.
     #[error("Unknown participant")]
     UnknownParticipant,
+    /// Invalid temporary secret key.
+    #[error("Invalid temporary secret key")]
+    InvalidTempSecretKey,
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
     InvalidSecretShares,

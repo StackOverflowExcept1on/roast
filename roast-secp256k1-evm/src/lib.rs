@@ -17,10 +17,12 @@ pub mod dkg {
     pub use roast_core::dkg::DkgStatus;
 
     /// Represents dealer that can be used for Distributed Key Generation.
-    pub type Dealer = roast_core::dkg::Dealer<frost_secp256k1_evm::Secp256K1Keccak256>;
+    pub type Dealer =
+        roast_core::dkg::Dealer<frost_secp256k1_evm::Secp256K1Keccak256, sha3::Keccak256>;
 
     /// Represents participant of Distributed Key Generation.
-    pub type Participant = roast_core::dkg::Participant<frost_secp256k1_evm::Secp256K1Keccak256>;
+    pub type Participant =
+        roast_core::dkg::Participant<frost_secp256k1_evm::Secp256K1Keccak256, sha3::Keccak256>;
 }
 
 pub mod error {

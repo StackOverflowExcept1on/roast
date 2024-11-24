@@ -11,17 +11,7 @@ mod coordinator {
     pub type Coordinator = roast_core::Coordinator<frost_ed448::Ed448Shake256>;
 }
 
-pub mod dkg {
-    //! Distributed Key Generation types.
-
-    pub use roast_core::dkg::DkgStatus;
-
-    /// Represents dealer that can be used for Distributed Key Generation.
-    pub type Dealer = roast_core::dkg::Dealer<frost_ed448::Ed448Shake256>;
-
-    /// Represents participant of Distributed Key Generation.
-    pub type Participant = roast_core::dkg::Participant<frost_ed448::Ed448Shake256>;
-}
+// TODO: replace `sha3::Shake256` with something else to support dkg
 
 pub mod error {
     //! Error types.

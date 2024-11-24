@@ -1,12 +1,7 @@
 use roast_core::tests;
 use roast_ed448::{error::Error, frost::rand_core::OsRng};
 
-#[test]
-fn test_dkg_basic() -> Result<(), Error> {
-    let mut rng = OsRng;
-    tests::test_dkg_basic(2, 3, &mut rng)?;
-    Ok(())
-}
+// TODO: replace `sha3::Shake256` with something else to support dkg tests
 
 #[test]
 fn test_basic() -> Result<(), Error> {
