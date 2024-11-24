@@ -130,8 +130,8 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                 .get(&identifier)
                 .and_then(|signing_package| {
                     if is_malicious {
-                        let zero = <<C::Group as Group>::Field as Field>::zero();
-                        let serialization = <<C::Group as Group>::Field as Field>::serialize(&zero);
+                        let zero = <<C::Group as Group>::Field>::zero();
+                        let serialization = <<C::Group as Group>::Field>::serialize(&zero);
                         signer.regenerate_signing_nonces(rng);
                         Some(SignatureShare::<C>::deserialize(serialization.as_ref()).unwrap())
                     } else {
