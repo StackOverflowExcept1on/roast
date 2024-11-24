@@ -237,84 +237,81 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(Error::Dkg(DkgError::UnknownParticipant));
         }
 
-        if self
+        // TODO: it should return other error, not InvalidStateTransition
+        let (_, temp_public_key) = self
             .round1_packages
             .get(&identifier)
-            .filter(|(_, temp_public_key)| {
-                temp_public_key.to_element()
-                    == <C::Group>::generator() * temp_secret_key.to_scalar()
-            })
-            .is_some()
-        {
+            .ok_or(DkgError::InvalidStateTransition)?;
+
+        if temp_public_key.to_element() != <C::Group>::generator() * temp_secret_key.to_scalar() {
             return Err(Error::Dkg(DkgError::InvalidTempSecretKey));
         }
 
-        // TODO: handle case when can't find round2_packages_encrypted
-        if let Some(round2_packages_encrypted) =
-            self.round2_packages_encrypted.get(&identifier).cloned()
-        {
-            // TODO: maybe extract this into a function like decrypt_round2_packages
-            let mut round2_packages = BTreeMap::new();
+        // TODO: it should return other error, not InvalidStateTransition
+        let round2_packages_encrypted = self
+            .round2_packages_encrypted
+            .get(&identifier)
+            .cloned()
+            .ok_or(DkgError::InvalidStateTransition)?;
 
-            // TODO: it should return other error, not InvalidStateTransition (maybe
-            // DecryptionError?)
-            for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
-                let (_, sender_temp_public_key) = self
+        // TODO: maybe extract this into a function like decrypt_round2_packages
+        let mut round2_packages = BTreeMap::new();
+
+        // TODO: it should return other error, not InvalidStateTransition (maybe
+        // DecryptionError?)
+        for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
+            let (_, sender_temp_public_key) = self
+                .round1_packages
+                .get(&sender_identifier)
+                .ok_or(DkgError::InvalidStateTransition)?;
+
+            let shared_secret = sender_temp_public_key.to_element() * temp_secret_key.to_scalar();
+            let shared_secret_bytes =
+                <C::Group>::serialize(&shared_secret).map_err(|err| FrostError::GroupError(err))?;
+
+            let hkdf =
+                Hkdf::<H, SimpleHmac<H>>::new(Some(C::ID.as_ref()), shared_secret_bytes.as_ref());
+
+            let mut key = [0; 16];
+            hkdf.expand(KEY_PREFIX, &mut key)
+                .map_err(|_| DkgError::InvalidStateTransition)?;
+
+            let mut iv = [0; 16];
+            hkdf.expand(IV_PREFIX, &mut iv)
+                .map_err(|_| DkgError::InvalidStateTransition)?;
+
+            let mut buffer = round2_package_encrypted;
+            Aes128Ctr32BE::new(&key.into(), &iv.into())
+                .try_apply_keystream(&mut buffer)
+                .map_err(|_| DkgError::InvalidStateTransition)?;
+
+            let buffer_serialized = buffer
+                .try_into()
+                .map_err(|_| DkgError::InvalidStateTransition)?;
+            let signing_share = SigningShare::new(
+                <<C::Group as Group>::Field>::deserialize(&buffer_serialized)
+                    .map_err(|_| DkgError::InvalidStateTransition)?,
+            );
+
+            round2_packages.insert(sender_identifier, round2::Package::new(signing_share));
+        }
+
+        for (sender_identifier, round2_package) in round2_packages {
+            if round2_culprits.contains(&sender_identifier) {
+                let ell = sender_identifier;
+                let f_ell_i = *round2_package.signing_share();
+
+                let commitment = self
                     .round1_packages
-                    .get(&sender_identifier)
-                    .ok_or(DkgError::InvalidStateTransition)?;
+                    .get(&ell)
+                    .ok_or(FrostError::PackageNotFound)?
+                    .0
+                    .commitment();
 
-                let shared_secret =
-                    sender_temp_public_key.to_element() * temp_secret_key.to_scalar();
-                let shared_secret_bytes = <C::Group>::serialize(&shared_secret)
-                    .map_err(|err| FrostError::GroupError(err))?;
+                let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
 
-                let hkdf = Hkdf::<H, SimpleHmac<H>>::new(
-                    Some(C::ID.as_ref()),
-                    shared_secret_bytes.as_ref(),
-                );
-
-                let mut key = [0; 16];
-                hkdf.expand(KEY_PREFIX, &mut key)
-                    .map_err(|_| DkgError::InvalidStateTransition)?;
-
-                let mut iv = [0; 16];
-                hkdf.expand(IV_PREFIX, &mut iv)
-                    .map_err(|_| DkgError::InvalidStateTransition)?;
-
-                let mut buffer = round2_package_encrypted;
-                Aes128Ctr32BE::new(&key.into(), &iv.into())
-                    .try_apply_keystream(&mut buffer)
-                    .map_err(|_| DkgError::InvalidStateTransition)?;
-
-                let buffer_serialized = buffer
-                    .try_into()
-                    .map_err(|_| DkgError::InvalidStateTransition)?;
-                let signing_share = SigningShare::new(
-                    <<C::Group as Group>::Field>::deserialize(&buffer_serialized)
-                        .map_err(|_| DkgError::InvalidStateTransition)?,
-                );
-
-                round2_packages.insert(sender_identifier, round2::Package::new(signing_share));
-            }
-
-            for (sender_identifier, round2_package) in round2_packages {
-                if round2_culprits.contains(&sender_identifier) {
-                    let ell = sender_identifier;
-                    let f_ell_i = *round2_package.signing_share();
-
-                    let commitment = self
-                        .round1_packages
-                        .get(&ell)
-                        .ok_or(FrostError::PackageNotFound)?
-                        .0
-                        .commitment();
-
-                    let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
-
-                    if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
-                        self.round2_culprits_set.insert(ell);
-                    }
+                if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
+                    self.round2_culprits_set.insert(ell);
                 }
             }
         }
