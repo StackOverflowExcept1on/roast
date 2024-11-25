@@ -19,11 +19,82 @@ use frost_core::{
 use hkdf::{hmac::SimpleHmac, Hkdf};
 use rand_core::{CryptoRng, RngCore};
 
-type Round1Package<C> = (round1::Package<C>, VerifyingKey<C>);
+fn diffie_hellman<C: Ciphersuite>(
+    secret_key: &SigningKey<C>,
+    public_key: &VerifyingKey<C>,
+) -> Result<<C::Group as Group>::Serialization, Error<C>> {
+    let shared_secret = public_key.to_element() * secret_key.to_scalar();
+    let shared_secret_bytes = <C::Group as Group>::serialize(&shared_secret)
+        .map_err(|err| FrostError::GroupError(err))?;
+
+    Ok(shared_secret_bytes)
+}
+
+fn hkdf<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
+    shared_secret_bytes: <C::Group as Group>::Serialization,
+) -> Result<([u8; 16], [u8; 16]), Error<C>> {
+    const KEY_PREFIX: &[u8] = b"key";
+    const IV_PREFIX: &[u8] = b"iv";
+
+    let hkdf = Hkdf::<H, SimpleHmac<H>>::new(Some(C::ID.as_ref()), shared_secret_bytes.as_ref());
+
+    let mut key = [0; 16];
+    hkdf.expand(KEY_PREFIX, &mut key)
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+
+    let mut iv = [0; 16];
+    hkdf.expand(IV_PREFIX, &mut iv)
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+
+    Ok((key, iv))
+}
+
 type Aes128Ctr32BE = ctr::Ctr32BE<aes::Aes128>;
 
-const KEY_PREFIX: &[u8] = b"key";
-const IV_PREFIX: &[u8] = b"iv";
+fn encrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
+    round2_package: round2::Package<C>,
+    receiver_temp_public_key: &VerifyingKey<C>,
+    sender_temp_secret_key: &SigningKey<C>,
+) -> Result<Vec<u8>, Error<C>> {
+    let shared_secret_bytes = diffie_hellman(sender_temp_secret_key, receiver_temp_public_key)?;
+    let (key, iv) = hkdf::<C, H>(shared_secret_bytes)?;
+
+    let signing_share = round2_package.signing_share().to_scalar();
+    let singing_share_bytes = <<C::Group as Group>::Field as Field>::serialize(&signing_share);
+
+    let mut buffer = singing_share_bytes.as_ref().to_vec();
+    Aes128Ctr32BE::new(&key.into(), &iv.into())
+        .try_apply_keystream(&mut buffer)
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+
+    Ok(buffer)
+}
+
+fn decrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
+    round2_package_encrypted: Vec<u8>,
+    sender_temp_public_key: &VerifyingKey<C>,
+    receiver_temp_secret_key: &SigningKey<C>,
+) -> Result<round2::Package<C>, Error<C>> {
+    let shared_secret_bytes = diffie_hellman(receiver_temp_secret_key, sender_temp_public_key)?;
+    let (key, iv) = hkdf::<C, H>(shared_secret_bytes)?;
+
+    let mut buffer = round2_package_encrypted;
+    Aes128Ctr32BE::new(&key.into(), &iv.into())
+        .try_apply_keystream(&mut buffer)
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+
+    let buffer_serialized = buffer
+        .try_into()
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+    let signing_share = SigningShare::new(
+        <<C::Group as Group>::Field>::deserialize(&buffer_serialized)
+            .map_err(|_| DkgError::InvalidStateTransition)?,
+    );
+
+    Ok(round2::Package::new(signing_share))
+}
+
+type Round1Package<C> = (round1::Package<C>, VerifyingKey<C>);
 
 /// Represents all possible Distributed Key Generation statuses.
 #[derive(Debug)]
@@ -254,7 +325,6 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             .cloned()
             .ok_or(DkgError::InvalidStateTransition)?;
 
-        // TODO: maybe extract this into a function like decrypt_round2_packages
         let mut round2_packages = BTreeMap::new();
 
         // TODO: it should return other error, not InvalidStateTransition (maybe
@@ -265,35 +335,13 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
                 .get(&sender_identifier)
                 .ok_or(DkgError::InvalidStateTransition)?;
 
-            let shared_secret = sender_temp_public_key.to_element() * temp_secret_key.to_scalar();
-            let shared_secret_bytes =
-                <C::Group>::serialize(&shared_secret).map_err(|err| FrostError::GroupError(err))?;
+            let round2_package = decrypt_round2_package::<C, H>(
+                round2_package_encrypted,
+                sender_temp_public_key,
+                &temp_secret_key,
+            )?;
 
-            let hkdf =
-                Hkdf::<H, SimpleHmac<H>>::new(Some(C::ID.as_ref()), shared_secret_bytes.as_ref());
-
-            let mut key = [0; 16];
-            hkdf.expand(KEY_PREFIX, &mut key)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let mut iv = [0; 16];
-            hkdf.expand(IV_PREFIX, &mut iv)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let mut buffer = round2_package_encrypted;
-            Aes128Ctr32BE::new(&key.into(), &iv.into())
-                .try_apply_keystream(&mut buffer)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let buffer_serialized = buffer
-                .try_into()
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-            let signing_share = SigningShare::new(
-                <<C::Group as Group>::Field>::deserialize(&buffer_serialized)
-                    .map_err(|_| DkgError::InvalidStateTransition)?,
-            );
-
-            round2_packages.insert(sender_identifier, round2::Package::new(signing_share));
+            round2_packages.insert(sender_identifier, round2_package);
         }
 
         for (sender_identifier, round2_package) in round2_packages {
@@ -422,32 +470,13 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
                 .get(&receiver_identifier)
                 .ok_or(DkgError::InvalidStateTransition)?;
 
-            let shared_secret =
-                receiver_temp_public_key.to_element() * self.temp_secret_key.to_scalar();
-            let shared_secret_bytes = <C::Group as Group>::serialize(&shared_secret)
-                .map_err(|err| FrostError::GroupError(err))?;
+            let round2_package_encrypted = encrypt_round2_package::<C, H>(
+                round2_package,
+                receiver_temp_public_key,
+                &self.temp_secret_key,
+            )?;
 
-            let hkdf =
-                Hkdf::<H, SimpleHmac<H>>::new(Some(C::ID.as_ref()), shared_secret_bytes.as_ref());
-
-            let mut key = [0; 16];
-            hkdf.expand(KEY_PREFIX, &mut key)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let mut iv = [0; 16];
-            hkdf.expand(IV_PREFIX, &mut iv)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let signing_share = round2_package.signing_share().to_scalar();
-            let singing_share_bytes =
-                <<C::Group as Group>::Field as Field>::serialize(&signing_share);
-
-            let mut buffer = singing_share_bytes.as_ref().to_vec();
-            Aes128Ctr32BE::new(&key.into(), &iv.into())
-                .try_apply_keystream(&mut buffer)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            round2_packages_encrypted.insert(receiver_identifier, buffer);
+            round2_packages_encrypted.insert(receiver_identifier, round2_package_encrypted);
         }
 
         Ok(round2_packages_encrypted)
@@ -490,36 +519,13 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
                 .get(&sender_identifier)
                 .ok_or(DkgError::InvalidStateTransition)?;
 
-            let shared_secret =
-                sender_temp_public_key.to_element() * self.temp_secret_key.to_scalar();
-            let shared_secret_bytes =
-                <C::Group>::serialize(&shared_secret).map_err(|err| FrostError::GroupError(err))?;
+            let round2_package = decrypt_round2_package::<C, H>(
+                round2_package_encrypted,
+                sender_temp_public_key,
+                &self.temp_secret_key,
+            )?;
 
-            let hkdf =
-                Hkdf::<H, SimpleHmac<H>>::new(Some(C::ID.as_ref()), shared_secret_bytes.as_ref());
-
-            let mut key = [0; 16];
-            hkdf.expand(KEY_PREFIX, &mut key)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let mut iv = [0; 16];
-            hkdf.expand(IV_PREFIX, &mut iv)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let mut buffer = round2_package_encrypted;
-            Aes128Ctr32BE::new(&key.into(), &iv.into())
-                .try_apply_keystream(&mut buffer)
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-
-            let buffer_serialized = buffer
-                .try_into()
-                .map_err(|_| DkgError::InvalidStateTransition)?;
-            let signing_share = SigningShare::new(
-                <<C::Group as Group>::Field>::deserialize(&buffer_serialized)
-                    .map_err(|_| DkgError::InvalidStateTransition)?,
-            );
-
-            round2_packages.insert(sender_identifier, round2::Package::new(signing_share));
+            round2_packages.insert(sender_identifier, round2_package);
         }
 
         let mut round2_culprits_set = BTreeSet::new();
