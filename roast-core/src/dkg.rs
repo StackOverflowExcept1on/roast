@@ -49,7 +49,19 @@ fn hkdf<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
     Ok((key, iv))
 }
 
-type Aes128Ctr32BE = ctr::Ctr32BE<aes::Aes128>;
+fn try_apply_keystream<C: Ciphersuite>(
+    key: [u8; 16],
+    iv: [u8; 16],
+    buffer: &mut [u8],
+) -> Result<(), Error<C>> {
+    type Aes128Ctr32BE = ctr::Ctr32BE<aes::Aes128>;
+
+    Aes128Ctr32BE::new(&key.into(), &iv.into())
+        .try_apply_keystream(buffer)
+        .map_err(|_| DkgError::InvalidStateTransition)?;
+
+    Ok(())
+}
 
 fn encrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
     round2_package: round2::Package<C>,
@@ -63,9 +75,7 @@ fn encrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
     let singing_share_bytes = <<C::Group as Group>::Field as Field>::serialize(&signing_share);
 
     let mut buffer = singing_share_bytes.as_ref().to_vec();
-    Aes128Ctr32BE::new(&key.into(), &iv.into())
-        .try_apply_keystream(&mut buffer)
-        .map_err(|_| DkgError::InvalidStateTransition)?;
+    try_apply_keystream(key, iv, &mut buffer)?;
 
     Ok(buffer)
 }
@@ -79,9 +89,7 @@ fn decrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
     let (key, iv) = hkdf::<C, H>(shared_secret_bytes)?;
 
     let mut buffer = round2_package_encrypted;
-    Aes128Ctr32BE::new(&key.into(), &iv.into())
-        .try_apply_keystream(&mut buffer)
-        .map_err(|_| DkgError::InvalidStateTransition)?;
+    try_apply_keystream(key, iv, &mut buffer)?;
 
     let buffer_serialized = buffer
         .try_into()
