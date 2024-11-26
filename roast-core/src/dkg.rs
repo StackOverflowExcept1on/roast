@@ -254,12 +254,11 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
         let serialization = <<C::Group as Group>::Field>::serialize(&zero);
         let expected_len = serialization.as_ref().len();
 
-        // TODO: it should return other error, not InvalidStateTransition
         if round2_packages_encrypted
             .values()
             .any(|round2_package_encrypted| round2_package_encrypted.len() != expected_len)
         {
-            return Err(Error::Dkg(DkgError::InvalidStateTransition));
+            return Err(Error::Dkg(DkgError::InvalidPackageLength));
         }
 
         for (receiver_identifier, round2_package_encrypted) in round2_packages_encrypted {
@@ -411,6 +410,8 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
         min_signers: u16,
         rng: &mut RNG,
     ) -> Result<Self, Error<C>> {
+        keys::validate_num_of_signers(min_signers, max_signers)?;
+
         let temp_secret_key = SigningKey::new(rng);
         let temp_public_key = VerifyingKey::from(&temp_secret_key);
 
