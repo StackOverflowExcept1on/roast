@@ -45,7 +45,10 @@ pub enum MaliciousSignerError {
 
 /// Represents all possible errors that can occur in ROAST protocol.
 #[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum RoastError {
+pub enum RoastError<C: Ciphersuite> {
+    /// Error in FROST protocol.
+    #[error("FROST error: {0}")]
+    Frost(#[from] FrostError<C>),
     /// Malicious signer.
     #[error("Malicious signer: {0}")]
     MaliciousSigner(#[from] MaliciousSignerError),
@@ -63,7 +66,4 @@ pub enum Error<C: Ciphersuite> {
     /// Error in Distributed Key Generation.
     #[error("DKG error: {0}")]
     Dkg(#[from] DkgError),
-    /// Error in ROAST protocol.
-    #[error("ROAST error: {0}")]
-    Roast(#[from] RoastError),
 }

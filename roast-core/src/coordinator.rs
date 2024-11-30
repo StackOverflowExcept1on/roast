@@ -1,4 +1,4 @@
-use crate::error::{Error, FrostError, MaliciousSignerError, RoastError};
+use crate::error::{FrostError, MaliciousSignerError, RoastError};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
@@ -62,7 +62,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         min_signers: u16,
         public_key_package: PublicKeyPackage<C>,
         message: Vec<u8>,
-    ) -> Result<Self, Error<C>> {
+    ) -> Result<Self, RoastError<C>> {
         keys::validate_num_of_signers(min_signers, max_signers)?;
 
         Ok(Self {
@@ -98,16 +98,13 @@ impl<C: Ciphersuite> Coordinator<C> {
         identifier: Identifier<C>,
         signature_share: Option<SignatureShare<C>>,
         signing_commitments: SigningCommitments<C>,
-    ) -> Result<SessionStatus<C>, Error<C>> {
+    ) -> Result<SessionStatus<C>, RoastError<C>> {
         if let Some(err) = self.malicious_signers.get(&identifier).copied() {
-            return Err(Error::Roast(RoastError::MaliciousSigner(err)));
+            return Err(RoastError::MaliciousSigner(err));
         }
 
         if self.responsive_signers.contains(&identifier) {
-            return Err(Error::Roast(self.mark_malicious(
-                identifier,
-                MaliciousSignerError::UnsolicitedReply,
-            )));
+            return Err(self.mark_malicious(identifier, MaliciousSignerError::UnsolicitedReply));
         }
 
         if let Some(Session {
@@ -119,10 +116,9 @@ impl<C: Ciphersuite> Coordinator<C> {
             .and_then(|session_id| self.session.get_mut(session_id))
         {
             let Some(signature_share) = signature_share else {
-                return Err(Error::Roast(self.mark_malicious(
-                    identifier,
-                    MaliciousSignerError::InvalidSignatureShare,
-                )));
+                return Err(
+                    self.mark_malicious(identifier, MaliciousSignerError::InvalidSignatureShare)
+                );
             };
 
             let verification_result = (|| -> Result<(), FrostError<C>> {
@@ -143,10 +139,9 @@ impl<C: Ciphersuite> Coordinator<C> {
             })();
 
             if verification_result.is_err() {
-                return Err(Error::Roast(self.mark_malicious(
-                    identifier,
-                    MaliciousSignerError::InvalidSignatureShare,
-                )));
+                return Err(
+                    self.mark_malicious(identifier, MaliciousSignerError::InvalidSignatureShare)
+                );
             }
 
             signature_shares.insert(identifier, signature_share);
@@ -213,7 +208,7 @@ impl<C: Ciphersuite> Coordinator<C> {
         &mut self,
         identifier: Identifier<C>,
         malicious_signer_error: MaliciousSignerError,
-    ) -> RoastError {
+    ) -> RoastError<C> {
         self.malicious_signers
             .insert(identifier, malicious_signer_error);
 

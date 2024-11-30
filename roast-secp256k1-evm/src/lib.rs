@@ -31,7 +31,10 @@ pub mod error {
     /// Represents all possible errors that can occur in FROST protocol.
     pub type FrostError = roast_core::error::FrostError<frost_secp256k1_evm::Secp256K1Keccak256>;
 
-    pub use roast_core::error::{DkgError, MaliciousSignerError, RoastError};
+    /// Represents all possible errors that can occur in ROAST protocol.
+    pub type RoastError = roast_core::error::RoastError<frost_secp256k1_evm::Secp256K1Keccak256>;
+
+    pub use roast_core::error::{DkgError, MaliciousSignerError};
 
     /// Represents all possible errors that can occur.
     pub type Error = roast_core::error::Error<frost_secp256k1_evm::Secp256K1Keccak256>;

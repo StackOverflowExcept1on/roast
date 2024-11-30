@@ -85,7 +85,7 @@ pub fn test_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     min_signers: u16,
     max_signers: u16,
     rng: &mut RNG,
-) -> Result<(), Error<C>> {
+) -> Result<(), RoastError<C>> {
     test_malicious(min_signers, max_signers, 0, rng)
 }
 
@@ -96,7 +96,7 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     max_signers: u16,
     malicious_signers: u16,
     rng: &mut RNG,
-) -> Result<(), Error<C>> {
+) -> Result<(), RoastError<C>> {
     let (secret_shares, public_key_package) =
         keys::generate_with_dealer(max_signers, min_signers, IdentifierList::Default, rng)?;
 
@@ -152,10 +152,9 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                     }
                     SessionStatus::Finished { .. } => break 'outer,
                 },
-                Err(Error::Roast(RoastError::MaliciousSigner(_))) => continue 'inner,
-                Err(Error::Roast(RoastError::TooManyMaliciousSigners)) => unreachable!(),
-                Err(Error::Dkg(_)) => unimplemented!(),
-                Err(Error::Frost(err)) => return Err(err)?,
+                Err(RoastError::MaliciousSigner(_)) => continue 'inner,
+                Err(RoastError::TooManyMaliciousSigners) => unreachable!(),
+                Err(RoastError::Frost(err)) => return Err(err)?,
             }
         }
     }

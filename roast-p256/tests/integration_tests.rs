@@ -1,5 +1,8 @@
 use roast_core::tests;
-use roast_p256::{error::Error, frost::rand_core::OsRng};
+use roast_p256::{
+    error::{Error, RoastError},
+    frost::rand_core::OsRng,
+};
 
 #[test]
 fn test_dkg_basic() -> Result<(), Error> {
@@ -9,7 +12,7 @@ fn test_dkg_basic() -> Result<(), Error> {
 }
 
 #[test]
-fn test_basic() -> Result<(), Error> {
+fn test_basic() -> Result<(), RoastError> {
     let mut rng = OsRng;
     tests::test_basic(2, 3, &mut rng)?;
     tests::test_basic(67, 100, &mut rng)?;
@@ -17,7 +20,7 @@ fn test_basic() -> Result<(), Error> {
 }
 
 #[test]
-fn test_malicious() -> Result<(), Error> {
+fn test_malicious() -> Result<(), RoastError> {
     let mut rng = OsRng;
     tests::test_malicious(2, 3, 1, &mut rng)?;
     tests::test_malicious(67, 100, 33, &mut rng)?;

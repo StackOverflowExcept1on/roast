@@ -30,7 +30,10 @@ pub mod error {
     /// Represents all possible errors that can occur in FROST protocol.
     pub type FrostError = roast_core::error::FrostError<frost_ristretto255::Ristretto255Sha512>;
 
-    pub use roast_core::error::{DkgError, MaliciousSignerError, RoastError};
+    /// Represents all possible errors that can occur in ROAST protocol.
+    pub type RoastError = roast_core::error::RoastError<frost_ristretto255::Ristretto255Sha512>;
+
+    pub use roast_core::error::{DkgError, MaliciousSignerError};
 
     /// Represents all possible errors that can occur.
     pub type Error = roast_core::error::Error<frost_ristretto255::Ristretto255Sha512>;
