@@ -29,13 +29,14 @@ pub mod error {
     /// Represents all possible errors that can occur in FROST protocol.
     pub type FrostError = roast_core::error::FrostError<frost_p256::P256Sha256>;
 
+    /// Represents all possible errors that can occur in Distributed Key
+    /// Generation protocol.
+    pub type DkgError = roast_core::error::DkgError<frost_p256::P256Sha256>;
+
+    pub use roast_core::error::MaliciousSignerError;
+
     /// Represents all possible errors that can occur in ROAST protocol.
     pub type RoastError = roast_core::error::RoastError<frost_p256::P256Sha256>;
-
-    pub use roast_core::error::{DkgError, MaliciousSignerError};
-
-    /// Represents all possible errors that can occur.
-    pub type Error = roast_core::error::Error<frost_p256::P256Sha256>;
 }
 
 mod signer {

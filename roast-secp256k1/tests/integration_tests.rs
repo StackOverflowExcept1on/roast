@@ -1,11 +1,11 @@
 use roast_core::tests;
 use roast_secp256k1::{
-    error::{Error, RoastError},
+    error::{DkgError, RoastError},
     frost::rand_core::OsRng,
 };
 
 #[test]
-fn test_dkg_basic() -> Result<(), Error> {
+fn test_dkg_basic() -> Result<(), DkgError> {
     let mut rng = OsRng;
     tests::test_dkg_basic::<_, sha2::Sha256, _>(2, 3, &mut rng)?;
     Ok(())

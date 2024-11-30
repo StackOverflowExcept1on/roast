@@ -9,9 +9,13 @@ use thiserror_nostd_notrait::Error;
 /// Represents all possible errors that can occur in FROST protocol.
 pub type FrostError<C> = frost_core::Error<C>;
 
-/// Represents all possible errors that can occur in Distributed Key Generation.
+/// Represents all possible errors that can occur in Distributed Key Generation
+/// protocol.
 #[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum DkgError {
+pub enum DkgError<C: Ciphersuite> {
+    /// Error in FROST protocol.
+    #[error("FROST error: {0}")]
+    Frost(#[from] FrostError<C>),
     /// Duplicate participants.
     #[error("Duplicate participants")]
     DuplicateParticipants,
@@ -55,15 +59,4 @@ pub enum RoastError<C: Ciphersuite> {
     /// Too many malicious signers.
     #[error("Too many malicious signers")]
     TooManyMaliciousSigners,
-}
-
-/// Represents all possible errors that can occur.
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Error<C: Ciphersuite> {
-    /// Error in FROST protocol.
-    #[error("FROST error: {0}")]
-    Frost(#[from] FrostError<C>),
-    /// Error in Distributed Key Generation.
-    #[error("DKG error: {0}")]
-    Dkg(#[from] DkgError),
 }

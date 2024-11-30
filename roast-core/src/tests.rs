@@ -2,7 +2,7 @@
 
 use crate::{
     dkg::{Dealer, Participant},
-    error::{DkgError, Error, RoastError},
+    error::{DkgError, RoastError},
     Coordinator, SessionStatus, Signer,
 };
 use aes::cipher::crypto_common::BlockSizeUser;
@@ -25,7 +25,7 @@ pub fn test_dkg_basic<
     min_signers: u16,
     max_signers: u16,
     rng: &mut RNG,
-) -> Result<(), Error<C>> {
+) -> Result<(), DkgError<C>> {
     let mut identifiers = vec![];
     let mut participants = vec![];
 
@@ -62,7 +62,7 @@ pub fn test_dkg_basic<
                     assert_eq!(public_key_package, dealer.public_key_package()?);
                 }
                 Err(err) => {
-                    if let Error::Dkg(DkgError::InvalidSecretShares) = err {
+                    if let DkgError::InvalidSecretShares = err {
                         dealer.receive_round2_culprits(
                             participant.identifier(),
                             participant.round2_culprits()?,
