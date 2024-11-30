@@ -14,10 +14,11 @@ members = [
 version = "0.1.0"
 authors = ["StackOverflowExcept1on"]
 edition = "2021"
+rust-version = "1.81"
 readme = "README.md"
 repository = "https://github.com/StackOverflowExcept1on/roast"
 license = "MIT"
-categories = ["cryptography"]
+categories = ["cryptography", "cryptography::cryptocurrencies", "no-std"]
 
 [workspace.dependencies]
 aes = { version = "0.8", features = ["zeroize"], default-features = false }

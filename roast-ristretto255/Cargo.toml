@@ -3,6 +3,7 @@ name = "roast-ristretto255"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "A Schnorr signature scheme over the prime-order Ristretto group that supports ROAST"
 readme.workspace = true
 repository.workspace = true

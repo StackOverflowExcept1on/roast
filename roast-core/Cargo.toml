@@ -3,6 +3,7 @@ name = "roast-core"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
 readme.workspace = true
 repository.workspace = true

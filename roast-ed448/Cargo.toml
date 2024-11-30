@@ -3,6 +3,7 @@ name = "roast-ed448"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "A Schnorr signature scheme over Ed448 that supports ROAST"
 readme.workspace = true
 repository.workspace = true

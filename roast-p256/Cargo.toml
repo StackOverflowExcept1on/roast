@@ -3,6 +3,7 @@ name = "roast-p256"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "A Schnorr signature scheme over the NIST P-256 curve that supports ROAST"
 readme.workspace = true
 repository.workspace = true
