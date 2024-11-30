@@ -1,13 +1,13 @@
 //! Error types.
 
-use frost_core::Ciphersuite;
+use frost_core::{Ciphersuite, Error as FrostErrorType};
 #[cfg(feature = "std")]
 use thiserror::Error;
 #[cfg(not(feature = "std"))]
 use thiserror_nostd_notrait::Error;
 
 /// Represents all possible errors that can occur in FROST protocol.
-pub type FrostError<C> = frost_core::Error<C>;
+pub type FrostError<C> = FrostErrorType<C>;
 
 /// Represents all possible errors that can occur in Distributed Key Generation
 /// protocol.

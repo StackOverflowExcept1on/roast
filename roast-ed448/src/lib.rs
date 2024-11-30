@@ -17,7 +17,7 @@ pub mod error {
     //! Error types.
 
     /// Represents all possible errors that can occur in FROST protocol.
-    pub type FrostError = roast_core::error::FrostError<frost_ed448::Ed448Shake256>;
+    pub type FrostError = frost_ed448::Error;
 
     /// Represents all possible errors that can occur in Distributed Key
     /// Generation protocol.
