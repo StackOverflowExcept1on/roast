@@ -10,9 +10,9 @@ use thiserror_nostd_notrait::Error;
 pub type FrostError<C> = FrostErrorType<C>;
 
 /// Represents all possible errors that can occur in Distributed Key Generation
-/// protocol.
+/// protocol on dealer side.
 #[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum DkgError<C: Ciphersuite> {
+pub enum DkgDealerError<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
     Frost(#[from] FrostError<C>),
@@ -34,6 +34,34 @@ pub enum DkgError<C: Ciphersuite> {
     /// Invalid state transition.
     #[error("Invalid state transition")]
     InvalidStateTransition,
+}
+
+/// Represents all possible errors that can occur in Distributed Key Generation
+/// protocol on participant side.
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+pub enum DkgParticipantError<C: Ciphersuite> {
+    /// Error in FROST protocol.
+    #[error("FROST error: {0}")]
+    Frost(#[from] FrostError<C>),
+    /// Invalid secret shares.
+    #[error("Invalid secret shares")]
+    InvalidSecretShares,
+    /// Invalid state transition.
+    #[error("Invalid state transition")]
+    InvalidStateTransition,
+}
+
+/// Represents all possible errors that can occur in Distributed Key Generation
+/// protocol.
+#[cfg(any(test, feature = "test-impl"))]
+#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+pub enum DkgError<C: Ciphersuite> {
+    /// Error in Distributed Key Generation protocol on dealer side.
+    #[error("DKG dealer error: {0}")]
+    DkgDealer(#[from] DkgDealerError<C>),
+    /// Error in Distributed Key Generation protocol on participant side.
+    #[error("DKG participant error: {0}")]
+    DkgParticipant(#[from] DkgParticipantError<C>),
 }
 
 /// Represents all possible errors for which signer can be marked as malicious.

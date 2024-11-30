@@ -1,11 +1,8 @@
-use roast_core::tests;
-use roast_secp256k1_evm::{
-    error::{DkgError, RoastError},
-    frost::rand_core::OsRng,
-};
+use roast_core::{error::DkgError, tests};
+use roast_secp256k1_evm::{error::RoastError, frost::rand_core::OsRng};
 
 #[test]
-fn test_dkg_basic() -> Result<(), DkgError> {
+fn test_dkg_basic() -> Result<(), DkgError<frost_secp256k1_evm::Secp256K1Keccak256>> {
     let mut rng = OsRng;
     tests::test_dkg_basic::<_, sha3::Keccak256, _>(2, 3, &mut rng)?;
     Ok(())

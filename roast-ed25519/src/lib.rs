@@ -30,8 +30,13 @@ pub mod error {
     pub type FrostError = frost_ed25519::Error;
 
     /// Represents all possible errors that can occur in Distributed Key
-    /// Generation protocol.
-    pub type DkgError = roast_core::error::DkgError<frost_ed25519::Ed25519Sha512>;
+    /// Generation protocol on dealer side.
+    pub type DkgDealerError = roast_core::error::DkgDealerError<frost_ed25519::Ed25519Sha512>;
+
+    /// Represents all possible errors that can occur in Distributed Key
+    /// Generation protocol on participant side.
+    pub type DkgParticipantError =
+        roast_core::error::DkgParticipantError<frost_ed25519::Ed25519Sha512>;
 
     pub use roast_core::error::MaliciousSignerError;
 
