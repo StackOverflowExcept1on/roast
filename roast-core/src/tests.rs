@@ -47,7 +47,10 @@ pub fn test_dkg_basic<
     for participant in participants.iter_mut() {
         let round2_packages_encrypted =
             participant.receive_round1_packages(dealer.round1_packages().clone())?;
-        dealer.receive_round2_packages(participant.identifier(), round2_packages_encrypted)?;
+        dealer.receive_round2_packages_encrypted(
+            participant.identifier(),
+            round2_packages_encrypted,
+        )?;
     }
 
     assert!(dealer.blame_round2_participants().next().is_none());

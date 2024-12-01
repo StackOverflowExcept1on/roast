@@ -43,12 +43,15 @@ pub enum DkgParticipantError<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
     Frost(#[from] FrostError<C>),
-    /// Invalid secret shares.
-    #[error("Invalid secret shares")]
-    InvalidSecretShares,
     /// Invalid state transition.
     #[error("Invalid state transition")]
     InvalidStateTransition,
+    /// Encryption error.
+    #[error("Encryption error")]
+    Encryption,
+    /// Invalid secret shares.
+    #[error("Invalid secret shares")]
+    InvalidSecretShares,
 }
 
 /// Represents all possible errors that can occur in Distributed Key Generation

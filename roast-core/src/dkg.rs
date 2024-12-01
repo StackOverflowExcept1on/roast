@@ -217,7 +217,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
 
     /// Receives the [`Identifier`] and `round2_packages_encrypted` from the
     /// participant.
-    pub fn receive_round2_packages(
+    pub fn receive_round2_packages_encrypted(
         &mut self,
         identifier: Identifier<C>,
         round2_packages_encrypted: BTreeMap<Identifier<C>, Vec<u8>>,
@@ -462,8 +462,6 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
 
         let mut round2_packages_encrypted = BTreeMap::new();
 
-        // TODO: it should return other error, not InvalidStateTransition (maybe
-        // EncryptionError?)
         for (receiver_identifier, round2_package) in round2_packages {
             let (_, receiver_temp_public_key) = round1_packages
                 .get(&receiver_identifier)
@@ -474,7 +472,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
                 receiver_temp_public_key,
                 &self.temp_secret_key,
             )
-            .ok_or(DkgParticipantError::InvalidStateTransition)?;
+            .ok_or(DkgParticipantError::Encryption)?;
 
             round2_packages_encrypted.insert(receiver_identifier, round2_package_encrypted);
         }
