@@ -230,24 +230,27 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(DkgDealerError::Frost(FrostError::IncorrectNumberOfPackages));
         }
 
-        if self
-            .participants
-            .iter()
-            .filter(|id| identifier.ne(id))
-            .any(|id| !round2_packages_encrypted.contains_key(id))
-        {
-            return Err(DkgDealerError::Frost(FrostError::IncorrectPackage));
-        }
-
         let zero = <<C::Group as Group>::Field>::zero();
         let serialization = <<C::Group as Group>::Field>::serialize(&zero);
         let expected_len = serialization.as_ref().len();
 
-        if round2_packages_encrypted
-            .values()
-            .any(|round2_package_encrypted| round2_package_encrypted.len() != expected_len)
+        // check that `round2_packages_encrypted` keys contain all identifiers except
+        // sender identifier
+        if self
+            .participants
+            .iter()
+            .filter(|id| identifier.ne(id))
+            .any(|id| {
+                // value must be `Some(_)` and must also have length of `expected_len`
+                round2_packages_encrypted
+                    .get(id)
+                    .filter(|round2_package_encrypted| {
+                        round2_package_encrypted.len() == expected_len
+                    })
+                    .is_none()
+            })
         {
-            return Err(DkgDealerError::InvalidPackageLength);
+            return Err(DkgDealerError::Frost(FrostError::IncorrectPackage));
         }
 
         for (receiver_identifier, round2_package_encrypted) in round2_packages_encrypted {
@@ -286,7 +289,8 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
         Ok(public_key_package)
     }
 
-    /// Receives the [`Identifier`] and `round2_culprits` from the participant.
+    /// Receives the [`Identifier`] and `round2_culprits` and `temp_secret_key`
+    /// from the participant.
     pub fn receive_round2_culprits(
         &mut self,
         identifier: Identifier<C>,

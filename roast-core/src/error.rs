@@ -22,9 +22,6 @@ pub enum DkgDealerError<C: Ciphersuite> {
     /// Unknown participant.
     #[error("Unknown participant")]
     UnknownParticipant,
-    /// Invalid package length.
-    #[error("Invalid package length")]
-    InvalidPackageLength,
     /// Invalid temporary secret key.
     #[error("Invalid temporary secret key")]
     InvalidTempSecretKey,
