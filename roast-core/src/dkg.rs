@@ -308,57 +308,59 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(DkgDealerError::UnknownParticipant);
         }
 
-        // TODO: it should return other error, not InvalidStateTransition
+        if self.round1_packages.len() != self.max_signers as usize {
+            return Err(DkgDealerError::Frost(FrostError::IncorrectNumberOfPackages));
+        }
+        if self.round1_packages.len() != self.round2_packages_encrypted.len() {
+            return Err(DkgDealerError::Frost(FrostError::IncorrectNumberOfPackages));
+        }
+        if self
+            .round1_packages
+            .keys()
+            .any(|id| !self.round2_packages_encrypted.contains_key(id))
+        {
+            return Err(DkgDealerError::Frost(FrostError::IncorrectPackage));
+        }
+
         let (_, temp_public_key) = self
             .round1_packages
             .get(&identifier)
             .ok_or(DkgDealerError::InvalidStateTransition)?;
 
-        if temp_public_key.to_element() != <C::Group>::generator() * temp_secret_key.to_scalar() {
+        if *temp_public_key != VerifyingKey::from(&temp_secret_key) {
             return Err(DkgDealerError::InvalidTempSecretKey);
         }
 
-        // TODO: it should return other error, not InvalidStateTransition
         let round2_packages_encrypted = self
             .round2_packages_encrypted
             .get(&identifier)
             .cloned()
             .ok_or(DkgDealerError::InvalidStateTransition)?;
 
-        let mut round2_packages = BTreeMap::new();
-
         for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
-            let (_, sender_temp_public_key) = self
+            let (sender_round1_package, sender_temp_public_key) = self
                 .round1_packages
                 .get(&sender_identifier)
-                .ok_or(DkgDealerError::InvalidStateTransition)?;
+                .ok_or(FrostError::PackageNotFound)?;
 
-            let round2_package = decrypt_round2_package::<C, H>(
+            let Some(round2_package) = decrypt_round2_package::<C, H>(
                 round2_package_encrypted,
                 sender_temp_public_key,
                 &temp_secret_key,
-            )
-            .ok_or(DkgDealerError::InvalidStateTransition)?;
+            ) else {
+                self.round2_culprits_set.insert(sender_identifier);
+                continue;
+            };
 
-            round2_packages.insert(sender_identifier, round2_package);
-        }
-
-        for (sender_identifier, round2_package) in round2_packages {
             if round2_culprits.contains(&sender_identifier) {
-                let ell = sender_identifier;
                 let f_ell_i = *round2_package.signing_share();
-
-                let commitment = self
-                    .round1_packages
-                    .get(&ell)
-                    .ok_or(FrostError::PackageNotFound)?
-                    .0
-                    .commitment();
+                let commitment = sender_round1_package.commitment();
 
                 let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
 
                 if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
-                    self.round2_culprits_set.insert(ell);
+                    self.round2_culprits_set.insert(sender_identifier);
+                    continue;
                 }
             }
         }
@@ -579,10 +581,10 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
     }
 
     /// Returns the round2 culprits.
-    pub fn round2_culprits(&self) -> Result<BTreeSet<Identifier<C>>, DkgParticipantError<C>> {
+    pub fn round2_culprits(&mut self) -> Result<BTreeSet<Identifier<C>>, DkgParticipantError<C>> {
         let round2_culprits_set = self
             .round2_culprits_set
-            .clone()
+            .take()
             .ok_or(DkgParticipantError::InvalidStateTransition)?;
         Ok(round2_culprits_set)
     }
