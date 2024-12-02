@@ -515,38 +515,25 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
             return Err(DkgParticipantError::Frost(FrostError::IncorrectPackage));
         }
 
-        let mut round2_packages = BTreeMap::new();
-
-        // TODO: it should return other error, not InvalidStateTransition (maybe
-        // DecryptionError?)
-        // TODO: when decryption failed round2_culprits_set should be updated
-        for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
-            let (_, sender_temp_public_key) = round1_packages
-                .get(&sender_identifier)
-                .ok_or(DkgParticipantError::InvalidStateTransition)?;
-
-            let round2_package = decrypt_round2_package::<C, H>(
-                round2_package_encrypted,
-                sender_temp_public_key,
-                &self.temp_secret_key,
-            )
-            .ok_or(DkgParticipantError::InvalidStateTransition)?;
-
-            round2_packages.insert(sender_identifier, round2_package);
-        }
-
         let mut round2_culprits_set = BTreeSet::new();
         let mut signing_share = <<C::Group as Group>::Field>::zero();
 
-        for (sender_identifier, round2_package) in round2_packages.iter() {
-            let ell = *sender_identifier;
-            let f_ell_i = *round2_package.signing_share();
+        for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
+            let (sender_round1_package, sender_temp_public_key) = round1_packages
+                .get(&sender_identifier)
+                .ok_or(FrostError::PackageNotFound)?;
 
-            let commitment = round1_packages
-                .get(&ell)
-                .ok_or(FrostError::PackageNotFound)?
-                .0
-                .commitment();
+            let Some(round2_package) = decrypt_round2_package::<C, H>(
+                round2_package_encrypted,
+                sender_temp_public_key,
+                &self.temp_secret_key,
+            ) else {
+                round2_culprits_set.insert(sender_identifier);
+                continue;
+            };
+
+            let f_ell_i = *round2_package.signing_share();
+            let commitment = sender_round1_package.commitment();
 
             let secret_share = SecretShare::new(
                 *round2_secret_package.identifier(),
@@ -555,7 +542,8 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
             );
 
             if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
-                round2_culprits_set.insert(ell);
+                round2_culprits_set.insert(sender_identifier);
+                continue;
             }
 
             signing_share = signing_share + f_ell_i.to_scalar();
