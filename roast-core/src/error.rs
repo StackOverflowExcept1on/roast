@@ -22,15 +22,15 @@ pub enum DkgDealerError<C: Ciphersuite> {
     /// Unknown participant.
     #[error("Unknown participant")]
     UnknownParticipant,
+    /// Invalid state transition.
+    #[error("Invalid state transition")]
+    InvalidStateTransition,
     /// Invalid temporary secret key.
     #[error("Invalid temporary secret key")]
     InvalidTempSecretKey,
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
     InvalidSecretShares,
-    /// Invalid state transition.
-    #[error("Invalid state transition")]
-    InvalidStateTransition,
 }
 
 /// Represents all possible errors that can occur in Distributed Key Generation
@@ -43,9 +43,6 @@ pub enum DkgParticipantError<C: Ciphersuite> {
     /// Invalid state transition.
     #[error("Invalid state transition")]
     InvalidStateTransition,
-    /// Encryption error.
-    #[error("Encryption error")]
-    Encryption,
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
     InvalidSecretShares,

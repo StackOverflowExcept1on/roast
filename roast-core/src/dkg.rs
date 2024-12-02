@@ -327,8 +327,6 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
 
         let mut round2_packages = BTreeMap::new();
 
-        // TODO: it should return other error, not InvalidStateTransition (maybe
-        // DecryptionError?)
         for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
             let (_, sender_temp_public_key) = self
                 .round1_packages
@@ -476,7 +474,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
                 receiver_temp_public_key,
                 &self.temp_secret_key,
             )
-            .ok_or(DkgParticipantError::Encryption)?;
+            .ok_or(DkgParticipantError::InvalidStateTransition)?;
 
             round2_packages_encrypted.insert(receiver_identifier, round2_package_encrypted);
         }
