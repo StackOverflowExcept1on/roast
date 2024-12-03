@@ -308,6 +308,10 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(DkgDealerError::UnknownParticipant);
         }
 
+        if round2_culprits.is_empty() {
+            return Err(DkgDealerError::InvalidStateTransition);
+        }
+
         if self.round1_packages.len() != self.max_signers as usize {
             return Err(DkgDealerError::Frost(FrostError::IncorrectNumberOfPackages));
         }
