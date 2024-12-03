@@ -331,38 +331,48 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(DkgDealerError::InvalidTempSecretKey);
         }
 
-        let round2_packages_encrypted = self
+        let mut round2_packages_encrypted = self
             .round2_packages_encrypted
             .get(&identifier)
             .cloned()
             .ok_or(DkgDealerError::InvalidStateTransition)?;
 
-        for (sender_identifier, round2_package_encrypted) in round2_packages_encrypted {
-            let (sender_round1_package, sender_temp_public_key) = self
-                .round1_packages
-                .get(&sender_identifier)
-                .ok_or(FrostError::PackageNotFound)?;
+        let mut round2_culprits_set = BTreeSet::new();
 
-            let Some(round2_package) = decrypt_round2_package::<C, H>(
-                round2_package_encrypted,
-                sender_temp_public_key,
-                &temp_secret_key,
-            ) else {
-                self.round2_culprits_set.insert(sender_identifier);
-                continue;
-            };
+        for sender_identifier in round2_culprits.iter().cloned() {
+            if let Some(round2_package_encrypted) =
+                round2_packages_encrypted.remove(&sender_identifier)
+            {
+                let (sender_round1_package, sender_temp_public_key) = self
+                    .round1_packages
+                    .get(&sender_identifier)
+                    .ok_or(FrostError::PackageNotFound)?;
 
-            if round2_culprits.contains(&sender_identifier) {
+                let Some(round2_package) = decrypt_round2_package::<C, H>(
+                    round2_package_encrypted,
+                    sender_temp_public_key,
+                    &temp_secret_key,
+                ) else {
+                    round2_culprits_set.insert(sender_identifier);
+                    continue;
+                };
+
                 let f_ell_i = *round2_package.signing_share();
                 let commitment = sender_round1_package.commitment();
 
                 let secret_share = SecretShare::new(identifier, f_ell_i, commitment.clone());
 
                 if let Err(FrostError::InvalidSecretShare { .. }) = secret_share.verify() {
-                    self.round2_culprits_set.insert(sender_identifier);
+                    round2_culprits_set.insert(sender_identifier);
                     continue;
                 }
             }
+        }
+
+        if round2_culprits_set == round2_culprits {
+            self.round2_culprits_set.append(&mut round2_culprits_set);
+        } else {
+            self.round2_culprits_set.insert(identifier);
         }
 
         Ok(DkgStatus::InProgress)
