@@ -3,6 +3,7 @@ name = "roast-ed25519"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "A Schnorr signature scheme over Ed25519 that supports ROAST"
 readme.workspace = true
 repository.workspace = true
@@ -14,6 +15,7 @@ categories.workspace = true
 document-features.workspace = true
 frost-ed25519.workspace = true
 roast-core.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 roast-core = { workspace = true, features = ["test-impl"] }

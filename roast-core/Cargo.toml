@@ -3,6 +3,7 @@ name = "roast-core"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Rust implementations of Robust Asynchronous Schnorr Threshold Signatures (ROAST)"
 readme.workspace = true
 repository.workspace = true
@@ -11,8 +12,12 @@ keywords = ["cryptography", "crypto", "schnorr", "threshold", "signature"]
 categories.workspace = true
 
 [dependencies]
+aes.workspace = true
+ctr.workspace = true
+digest.workspace = true
 document-features.workspace = true
 frost-core.workspace = true
+hkdf.workspace = true
 rand = { workspace = true, optional = true }
 rand_core.workspace = true
 thiserror-nostd-notrait.workspace = true

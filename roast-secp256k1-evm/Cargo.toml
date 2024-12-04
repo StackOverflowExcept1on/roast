@@ -1,21 +1,21 @@
 [package]
-name = "roast-ed448"
+name = "roast-secp256k1-evm"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "A Schnorr signature scheme over Ed448 that supports ROAST"
+description = "A Schnorr signature scheme over the secp256k1 curve that supports ROAST and EVM."
 readme.workspace = true
 repository.workspace = true
 license.workspace = true
-keywords = ["cryptography", "crypto", "ed448", "threshold", "signature"]
+keywords = ["cryptography", "crypto", "secp256k1", "threshold", "signature"]
 categories.workspace = true
 
 [dependencies]
 document-features.workspace = true
-frost-ed448.workspace = true
+frost-secp256k1-evm.workspace = true
 roast-core.workspace = true
-# TODO: replace `sha3` with something else to support dkg
+sha3.workspace = true
 
 [dev-dependencies]
 roast-core = { workspace = true, features = ["test-impl"] }

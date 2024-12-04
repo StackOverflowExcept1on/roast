@@ -1,8 +1,15 @@
-use roast_core::tests;
-use roast_secp256k1::{frost::rand_core::OsRng, Error};
+use roast_core::{error::DkgError, tests};
+use roast_secp256k1::{error::RoastError, frost::rand_core::OsRng};
 
 #[test]
-fn test_basic() -> Result<(), Error> {
+fn test_dkg_basic() -> Result<(), DkgError<frost_secp256k1::Secp256K1Sha256>> {
+    let mut rng = OsRng;
+    tests::test_dkg_basic::<_, sha2::Sha256, _>(2, 3, &mut rng)?;
+    Ok(())
+}
+
+#[test]
+fn test_basic() -> Result<(), RoastError> {
     let mut rng = OsRng;
     tests::test_basic(2, 3, &mut rng)?;
     tests::test_basic(67, 100, &mut rng)?;
@@ -10,7 +17,7 @@ fn test_basic() -> Result<(), Error> {
 }
 
 #[test]
-fn test_malicious() -> Result<(), Error> {
+fn test_malicious() -> Result<(), RoastError> {
     let mut rng = OsRng;
     tests::test_malicious(2, 3, 1, &mut rng)?;
     tests::test_malicious(67, 100, 33, &mut rng)?;

@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::error::FrostError;
 use frost_core::{
     keys::KeyPackage,
     round1::{self, SigningCommitments, SigningNonces},
@@ -48,7 +48,7 @@ impl<C: Ciphersuite> Signer<C> {
         &mut self,
         signing_package: &SigningPackage<C>,
         rng: &mut RNG,
-    ) -> Result<SignatureShare<C>, Error<C>> {
+    ) -> Result<SignatureShare<C>, FrostError<C>> {
         let signature_share =
             round2::sign(signing_package, &self.signing_nonces, &self.key_package)?;
         self.regenerate_signing_nonces(rng);

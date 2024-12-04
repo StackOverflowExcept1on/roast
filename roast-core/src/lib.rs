@@ -7,7 +7,8 @@
 extern crate alloc;
 
 mod coordinator;
-mod error;
+pub mod dkg;
+pub mod error;
 mod signer;
 
 #[cfg(any(test, feature = "test-impl"))]
@@ -16,5 +17,4 @@ pub mod tests;
 pub use frost_core as frost;
 
 pub use coordinator::*;
-pub use error::*;
 pub use signer::*;

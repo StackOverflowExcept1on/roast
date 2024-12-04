@@ -11,11 +11,36 @@ mod coordinator {
     pub type Coordinator = roast_core::Coordinator<frost_p256::P256Sha256>;
 }
 
-mod error {
-    pub use roast_core::MaliciousSignerError;
+pub mod dkg {
+    //! Distributed Key Generation types.
 
-    /// Represents all possible errors that can occur.
-    pub type Error = roast_core::Error<frost_p256::P256Sha256>;
+    pub use roast_core::dkg::DkgStatus;
+
+    /// Represents dealer that can be used for Distributed Key Generation.
+    pub type Dealer = roast_core::dkg::Dealer<frost_p256::P256Sha256, sha2::Sha256>;
+
+    /// Represents participant of Distributed Key Generation.
+    pub type Participant = roast_core::dkg::Participant<frost_p256::P256Sha256, sha2::Sha256>;
+}
+
+pub mod error {
+    //! Error types.
+
+    /// Represents all possible errors that can occur in FROST protocol.
+    pub type FrostError = frost_p256::Error;
+
+    /// Represents all possible errors that can occur in Distributed Key
+    /// Generation protocol on dealer side.
+    pub type DkgDealerError = roast_core::error::DkgDealerError<frost_p256::P256Sha256>;
+
+    /// Represents all possible errors that can occur in Distributed Key
+    /// Generation protocol on participant side.
+    pub type DkgParticipantError = roast_core::error::DkgParticipantError<frost_p256::P256Sha256>;
+
+    pub use roast_core::error::MaliciousSignerError;
+
+    /// Represents all possible errors that can occur in ROAST protocol.
+    pub type RoastError = roast_core::error::RoastError<frost_p256::P256Sha256>;
 }
 
 mod signer {
@@ -26,5 +51,4 @@ mod signer {
 pub use frost_p256 as frost;
 
 pub use coordinator::*;
-pub use error::*;
 pub use signer::*;

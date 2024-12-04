@@ -1,15 +1,86 @@
 //! Test cases.
 
 use crate::{
-    frost::{
-        keys::{self, IdentifierList, KeyPackage},
-        Ciphersuite,
-    },
-    Coordinator, Error, SessionStatus, Signer,
+    dkg::{Dealer, Participant},
+    error::{DkgError, DkgParticipantError, RoastError},
+    Coordinator, SessionStatus, Signer,
 };
+use aes::cipher::crypto_common::BlockSizeUser;
 use alloc::collections::BTreeMap;
-use frost_core::{round2::SignatureShare, Field, Group};
+use digest::Digest;
+use frost_core::{
+    keys::{self, IdentifierList, KeyPackage},
+    round2::SignatureShare,
+    Ciphersuite, Field, Group,
+};
 use rand::{seq::SliceRandom, CryptoRng, RngCore};
+
+/// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
+/// participants.
+pub fn test_dkg_basic<
+    C: Ciphersuite,
+    H: Clone + BlockSizeUser + Digest,
+    RNG: RngCore + CryptoRng,
+>(
+    min_signers: u16,
+    max_signers: u16,
+    rng: &mut RNG,
+) -> Result<(), DkgError<C>> {
+    let mut identifiers = vec![];
+    let mut participants = vec![];
+
+    for participant_index in 1..=max_signers {
+        let identifier = participant_index.try_into().expect("should be nonzero");
+        identifiers.push(identifier);
+        let participant = Participant::<C, H>::new(identifier, max_signers, min_signers, rng)?;
+        participants.push(participant);
+    }
+
+    let mut dealer = Dealer::<C, H>::new(max_signers, min_signers, identifiers)?;
+
+    for participant in participants.iter_mut() {
+        dealer.receive_round1_package(participant.identifier(), participant.round1_package()?)?;
+    }
+
+    assert!(dealer.blame_round1_participants().next().is_none());
+
+    for participant in participants.iter_mut() {
+        let round2_packages_encrypted =
+            participant.receive_round1_packages(dealer.round1_packages().clone())?;
+        dealer.receive_round2_packages_encrypted(
+            participant.identifier(),
+            round2_packages_encrypted,
+        )?;
+    }
+
+    assert!(dealer.blame_round2_participants().next().is_none());
+
+    for participant in participants.iter_mut() {
+        if let Some(round2_packages_encrypted) = dealer
+            .round2_packages_encrypted(participant.identifier())
+            .cloned()
+        {
+            match participant.receive_round2_packages_encrypted(round2_packages_encrypted) {
+                Ok((_key_package, public_key_package)) => {
+                    assert_eq!(public_key_package, dealer.public_key_package()?);
+                }
+                Err(err) => {
+                    if let DkgParticipantError::InvalidSecretShares = err {
+                        dealer.receive_round2_culprits(
+                            participant.identifier(),
+                            participant.round2_culprits()?,
+                            participant.temp_secret_key(),
+                        )?;
+                    }
+                }
+            }
+        }
+    }
+
+    dealer.try_finish()?;
+
+    Ok(())
+}
 
 /// Runs ROAST algorithm with `min_signers`/`max_signers` multi-signature and no
 /// malicious signers.
@@ -17,7 +88,7 @@ pub fn test_basic<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     min_signers: u16,
     max_signers: u16,
     rng: &mut RNG,
-) -> Result<(), Error<C>> {
+) -> Result<(), RoastError<C>> {
     test_malicious(min_signers, max_signers, 0, rng)
 }
 
@@ -28,7 +99,7 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
     max_signers: u16,
     malicious_signers: u16,
     rng: &mut RNG,
-) -> Result<(), Error<C>> {
+) -> Result<(), RoastError<C>> {
     let (secret_shares, public_key_package) =
         keys::generate_with_dealer(max_signers, min_signers, IdentifierList::Default, rng)?;
 
@@ -62,8 +133,8 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                 .get(&identifier)
                 .and_then(|signing_package| {
                     if is_malicious {
-                        let zero = <<C::Group as Group>::Field as Field>::zero();
-                        let serialization = <<C::Group as Group>::Field as Field>::serialize(&zero);
+                        let zero = <<C::Group as Group>::Field>::zero();
+                        let serialization = <<C::Group as Group>::Field>::serialize(&zero);
                         signer.regenerate_signing_nonces(rng);
                         Some(SignatureShare::<C>::deserialize(serialization.as_ref()).unwrap())
                     } else {
@@ -84,9 +155,9 @@ pub fn test_malicious<C: Ciphersuite, RNG: RngCore + CryptoRng>(
                     }
                     SessionStatus::Finished { .. } => break 'outer,
                 },
-                Err(Error::MaliciousSigner(_)) => continue 'inner,
-                Err(Error::TooManyMaliciousSigners) => unreachable!(),
-                Err(err) => return Err(err)?,
+                Err(RoastError::MaliciousSigner(_)) => continue 'inner,
+                Err(RoastError::TooManyMaliciousSigners) => unreachable!(),
+                Err(RoastError::Frost(err)) => return Err(err)?,
             }
         }
     }

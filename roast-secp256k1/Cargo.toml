@@ -3,6 +3,7 @@ name = "roast-secp256k1"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "A Schnorr signature scheme over the secp256k1 curve that supports ROAST"
 readme.workspace = true
 repository.workspace = true
@@ -14,6 +15,7 @@ categories.workspace = true
 document-features.workspace = true
 frost-secp256k1.workspace = true
 roast-core.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 roast-core = { workspace = true, features = ["test-impl"] }
