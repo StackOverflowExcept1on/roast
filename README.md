@@ -2,15 +2,16 @@
 
 [![Build Status](https://github.com/StackOverflowExcept1on/roast/workflows/CI/badge.svg)](https://github.com/StackOverflowExcept1on/roast/actions)
 
-| Crate                                        | Description                  |
-|----------------------------------------------|------------------------------|
-| [`roast-core`](roast-core)                   | Generic ROAST implementation |
-| [`roast-ed25519`](roast-ed25519)             | Ed25519 ciphersuite          |
-| [`roast-ed448`](roast-ed448)                 | Ed448 ciphersuite            |
-| [`roast-p256`](roast-ed448)                  | P-256 ciphersuite            |
-| [`roast-ristretto255`](roast-ristretto255)   | Ristretto255 ciphersuite     |
-| [`roast-secp256k1`](roast-secp256k1)         | secp256k1 ciphersuite        |
-| [`roast-secp256k1-evm`](roast-secp256k1-evm) | secp256k1 ciphersuite (EVM)  |
+| Crate                                        | Description                     |
+|----------------------------------------------|---------------------------------|
+| [`roast-core`](roast-core)                   | Generic ROAST implementation    |
+| [`roast-ed25519`](roast-ed25519)             | Ed25519 ciphersuite             |
+| [`roast-ed448`](roast-ed448)                 | Ed448 ciphersuite               |
+| [`roast-p256`](roast-ed448)                  | P-256 ciphersuite               |
+| [`roast-ristretto255`](roast-ristretto255)   | Ristretto255 ciphersuite        |
+| [`roast-secp256k1`](roast-secp256k1)         | secp256k1 ciphersuite           |
+| [`roast-secp256k1-evm`](roast-secp256k1-evm) | secp256k1 ciphersuite (EVM)     |
+| [`roast-secp256k1-tr`](roast-secp256k1-tr)   | secp256k1 ciphersuite (Taproot) |
 
 Rust implementation of [ROAST (Robust Asynchronous Schnorr Threshold Signatures)](https://eprint.iacr.org/2022/550)
 with [cryptography by Zcash Foundation](https://github.com/ZcashFoundation/frost).

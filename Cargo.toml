@@ -8,6 +8,7 @@ members = [
     "roast-ristretto255",
     "roast-secp256k1",
     "roast-secp256k1-evm",
+    "roast-secp256k1-tr",
 ]
 
 [workspace.package]
@@ -25,13 +26,14 @@ aes = { version = "0.8", features = ["zeroize"], default-features = false }
 ctr = { version = "0.9", features = ["zeroize"], default-features = false }
 digest = { version = "0.10", default-features = false }
 document-features = "0.2"
-frost-core = { version = "2.0", features = ["internals"], default-features = false }
-frost-ed25519 = { version = "2.0", default-features = false }
-frost-ed448 = { version = "2.0", default-features = false }
-frost-p256 = { version = "2.0", default-features = false }
-frost-ristretto255 = { version = "2.0", default-features = false }
-frost-secp256k1 = { version = "2.0", default-features = false }
-frost-secp256k1-evm = { version = "2.0", default-features = false }
+frost-core = { version = "2.1", features = ["internals"], default-features = false }
+frost-ed25519 = { version = "2.1", default-features = false }
+frost-ed448 = { version = "2.1", default-features = false }
+frost-p256 = { version = "2.1", default-features = false }
+frost-ristretto255 = { version = "2.1", default-features = false }
+frost-secp256k1 = { version = "2.1", default-features = false }
+frost-secp256k1-evm = { version = "2.1", default-features = false }
+frost-secp256k1-tr = { version = "2.1", default-features = false }
 hkdf = { version = "0.12", default-features = false }
 rand = { version = "0.8", default-features = false }
 rand_core = { version = "0.6", default-features = false }
@@ -47,3 +49,4 @@ roast-p256 = { path = "roast-p256", default-features = false }
 roast-ristretto255 = { path = "roast-ristretto255", default-features = false }
 roast-secp256k1 = { path = "roast-secp256k1", default-features = false }
 roast-secp256k1-evm = { path = "roast-secp256k1-evm", default-features = false }
+roast-secp256k1-tr = { path = "roast-secp256k1-tr", default-features = false }

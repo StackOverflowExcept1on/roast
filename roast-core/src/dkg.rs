@@ -568,7 +568,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
             return Err(DkgParticipantError::InvalidSecretShares);
         }
 
-        signing_share = signing_share + *round2_secret_package.secret_share();
+        signing_share = signing_share + round2_secret_package.secret_share();
         let signing_share = SigningShare::new(signing_share);
 
         let verifying_share = signing_share.into();

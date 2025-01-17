@@ -277,9 +277,9 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "frost-core"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5afd375261c34d31ff24dad068382f4bc3c95010c919d4fb8d483dc3d85c023"
+checksum = "1858230cabb6792a5020daf4b0074f57b7d1e2a520ac544c77f102babee62ff4"
 dependencies = [
  "byteorder",
  "const-crc32-nostd",
@@ -299,9 +299,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ed25519"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4186731878c57b4e4d5d1103c8e0d2a827d3cb63cf577826ce29d52c34be7d39"
+checksum = "c350ac3d0463a009a061aba12b67920acee94338951c849bb4c492d55223dece"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -313,9 +313,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ed448"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8c4dffab2dc334fc1b864cf1ce930aafc29e05e4ab9281c81858e92752c1410"
+checksum = "5d38a22454aa992cd57f4c2df5df45b4b95493a5eca262016c2db924c52972ed"
 dependencies = [
  "document-features",
  "ed448-goldilocks",
@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "frost-p256"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "235c7f29e912d63953881fc9ee942922c0f63e97ce011e3af8772ced55db4fa6"
+checksum = "aef561eda6f686941c6082c3ccef8b0c2f44eb84cd951b6a660f98c4d9348ad4"
 dependencies = [
  "document-features",
  "frost-core",
@@ -341,9 +341,9 @@ dependencies = [
 
 [[package]]
 name = "frost-rerandomized"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a9d77595060546b53543d96b83dbeacaf3907e40a89763a8bb22124812b0cb6"
+checksum = "e8a3b10d9c1e9f298522510940b5b8c3d55040420517ec8d2bb86c4c2d1ae3ee"
 dependencies = [
  "derive-getters",
  "document-features",
@@ -354,9 +354,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ristretto255"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb3f0e065fb99f6abb96b58bd63fd7a6255efe37ee9672d97a7404ac644e54a7"
+checksum = "0dd77a6e22b83079654472bbabc7a0b1197116b80bf01d15b76f132dc9fe9f3a"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -368,9 +368,9 @@ dependencies = [
 
 [[package]]
 name = "frost-secp256k1"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52edea5a88d11135b2bf069f03e756d405d39c5a1c9c9f4d6147505948d7fff7"
+checksum = "2d4890a0cdd6897a4af81016ec3299e4eb3a459d6468933d2a385302241662b5"
 dependencies = [
  "document-features",
  "frost-core",
@@ -382,9 +382,9 @@ dependencies = [
 
 [[package]]
 name = "frost-secp256k1-evm"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "509c7e354192c8b86996eba6576c2899f31140f7c2e7dcc7cadbdb170fed7368"
+checksum = "28c954e82288be5d79f90ee5d646330aa7cd16c8830f6f81e5aaee51bd7e5cc9"
 dependencies = [
  "document-features",
  "frost-core",
@@ -392,6 +392,20 @@ dependencies = [
  "k256",
  "rand_core",
  "sha3",
+]
+
+[[package]]
+name = "frost-secp256k1-tr"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be31fe5caf49ffddb2a823b078567bebf9ab844d750d69fdac7d614e4a3eb44a"
+dependencies = [
+ "document-features",
+ "frost-core",
+ "frost-rerandomized",
+ "k256",
+ "rand_core",
+ "sha2",
 ]
 
 [[package]]
@@ -485,9 +499,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -680,6 +694,17 @@ dependencies = [
  "rand_core",
  "roast-core",
  "sha3",
+]
+
+[[package]]
+name = "roast-secp256k1-tr"
+version = "0.1.0"
+dependencies = [
+ "document-features",
+ "frost-secp256k1-tr",
+ "rand_core",
+ "roast-core",
+ "sha2",
 ]
 
 [[package]]

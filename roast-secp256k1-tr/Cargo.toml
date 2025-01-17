@@ -1,0 +1,36 @@
+[package]
+name = "roast-secp256k1-tr"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "A Schnorr signature scheme over the secp256k1 curve that supports ROAST and Taproot."
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords = ["cryptography", "crypto", "secp256k1", "threshold", "signature"]
+categories.workspace = true
+
+[dependencies]
+document-features.workspace = true
+frost-secp256k1-tr.workspace = true
+roast-core.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+roast-core = { workspace = true, features = ["test-impl"] }
+rand_core = { workspace = true, features = ["getrandom"] }
+
+[features]
+default = ["serialization", "cheater-detection", "std"]
+#! ## Features
+## Enable standard library support.
+std = ["roast-core/std"]
+## Enable `serde` support for types that need to be communicated. You
+## can use `serde` to serialize structs with any encoder that supports
+## `serde` (e.g. JSON with `serde_json`).
+serde = ["roast-core/serde"]
+## Enable a default serialization format. Enables `serde`.
+serialization = ["roast-core/serialization"]
+## Enable cheater detection.
+cheater-detection = ["roast-core/cheater-detection"]
