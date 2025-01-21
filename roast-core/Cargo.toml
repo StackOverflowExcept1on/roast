@@ -33,7 +33,7 @@ std = ["dep:thiserror"]
 ## `serde` (e.g. JSON with `serde_json`).
 serde = ["frost-core/serde"]
 ## Enable a default serialization format. Enables `serde`.
-serialization = ["frost-core/serialization"]
+serialization = ["serde", "frost-core/serialization"]
 ## Exposes ciphersuite-generic tests for other crates to use.
 test-impl = ["dep:rand"]
 ## Enable cheater detection.

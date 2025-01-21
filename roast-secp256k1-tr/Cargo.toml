@@ -31,6 +31,6 @@ std = ["roast-core/std"]
 ## `serde` (e.g. JSON with `serde_json`).
 serde = ["roast-core/serde"]
 ## Enable a default serialization format. Enables `serde`.
-serialization = ["roast-core/serialization"]
+serialization = ["serde", "roast-core/serialization"]
 ## Enable cheater detection.
 cheater-detection = ["roast-core/cheater-detection"]
