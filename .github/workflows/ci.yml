@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, dev, dev-codec ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, dev, dev-codec ]
   workflow_dispatch:
 
 env:
