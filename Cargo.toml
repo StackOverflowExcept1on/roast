@@ -40,7 +40,7 @@ rand_core = { version = "0.6", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 thiserror-nostd-notrait = { version = "1.0", default-features = false }
-thiserror = { version = "1.0", default-features = false } # TODO: https://github.com/ZcashFoundation/frost/issues/768
+thiserror = { version = "2.0", default-features = false } # TODO: https://github.com/ZcashFoundation/frost/issues/768
 
 roast-core = { path = "roast-core", default-features = false }
 roast-ed25519 = { path = "roast-ed25519", default-features = false }
