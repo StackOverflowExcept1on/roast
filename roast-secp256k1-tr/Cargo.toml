@@ -22,10 +22,8 @@ roast-core = { workspace = true, features = ["test-impl"] }
 rand_core = { workspace = true, features = ["getrandom"] }
 
 [features]
-default = ["serialization", "cheater-detection", "std"]
+default = ["serialization", "cheater-detection"]
 #! ## Features
-## Enable standard library support.
-std = ["roast-core/std"]
 ## Enable `serde` support for types that need to be communicated. You
 ## can use `serde` to serialize structs with any encoder that supports
 ## `serde` (e.g. JSON with `serde_json`).

@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 #![doc = document_features::document_features!()]

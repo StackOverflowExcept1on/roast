@@ -26,21 +26,20 @@ aes = { version = "0.8", features = ["zeroize"], default-features = false }
 ctr = { version = "0.9", features = ["zeroize"], default-features = false }
 digest = { version = "0.10", default-features = false }
 document-features = "0.2"
-frost-core = { version = "2.1", features = ["internals"], default-features = false }
-frost-ed25519 = { version = "2.1", default-features = false }
-frost-ed448 = { version = "2.1", default-features = false }
-frost-p256 = { version = "2.1", default-features = false }
-frost-ristretto255 = { version = "2.1", default-features = false }
-frost-secp256k1 = { version = "2.1", default-features = false }
-frost-secp256k1-evm = { version = "2.1", default-features = false }
-frost-secp256k1-tr = { version = "2.1", default-features = false }
+frost-core = { version = "2.2", features = ["internals"], default-features = false }
+frost-ed25519 = { version = "2.2", default-features = false }
+frost-ed448 = { version = "2.2", default-features = false }
+frost-p256 = { version = "2.2", default-features = false }
+frost-ristretto255 = { version = "2.2", default-features = false }
+frost-secp256k1 = { version = "2.2", default-features = false }
+frost-secp256k1-evm = { version = "2.2", default-features = false }
+frost-secp256k1-tr = { version = "2.2", default-features = false }
 hkdf = { version = "0.12", default-features = false }
 rand = { version = "0.8", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 sha3 = { version = "0.10", default-features = false }
-thiserror-nostd-notrait = { version = "1.0", default-features = false }
-thiserror = { version = "2.0", default-features = false } # TODO: https://github.com/ZcashFoundation/frost/issues/768
+thiserror = { version = "2.0", default-features = false }
 
 roast-core = { path = "roast-core", default-features = false }
 roast-ed25519 = { path = "roast-ed25519", default-features = false }

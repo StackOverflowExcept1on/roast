@@ -20,14 +20,11 @@ frost-core.workspace = true
 hkdf.workspace = true
 rand = { workspace = true, optional = true }
 rand_core.workspace = true
-thiserror-nostd-notrait.workspace = true
-thiserror = { workspace = true, optional = true }
+thiserror.workspace = true
 
 [features]
-default = ["serialization", "cheater-detection", "std"]
+default = ["serialization", "cheater-detection"]
 #! ## Features
-## Enable standard library support.
-std = ["dep:thiserror"]
 ## Enable `serde` support for types that need to be communicated. You
 ## can use `serde` to serialize structs with any encoder that supports
 ## `serde` (e.g. JSON with `serde_json`).

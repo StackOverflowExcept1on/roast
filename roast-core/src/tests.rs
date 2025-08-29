@@ -2,11 +2,12 @@
 
 use crate::{
     dkg::{Dealer, Participant},
-    error::{DkgError, DkgParticipantError, RoastError},
+    error::{DkgParticipantError, RoastError},
     Coordinator, SessionStatus, Signer,
 };
 use aes::cipher::crypto_common::BlockSizeUser;
-use alloc::collections::BTreeMap;
+use alloc::{boxed::Box, collections::BTreeMap};
+use core::error::Error;
 use digest::Digest;
 use frost_core::{
     keys::{self, IdentifierList, KeyPackage},
@@ -25,7 +26,7 @@ pub fn test_dkg_basic<
     min_signers: u16,
     max_signers: u16,
     rng: &mut RNG,
-) -> Result<(), DkgError<C>> {
+) -> Result<(), Box<dyn Error>> {
     let mut identifiers = vec![];
     let mut participants = vec![];
 

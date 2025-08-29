@@ -1,10 +1,7 @@
 //! Error types.
 
 use frost_core::{Ciphersuite, Error as FrostErrorType};
-#[cfg(feature = "std")]
 use thiserror::Error;
-#[cfg(not(feature = "std"))]
-use thiserror_nostd_notrait::Error;
 
 /// Represents all possible errors that can occur in FROST protocol.
 pub type FrostError<C> = FrostErrorType<C>;
@@ -46,19 +43,6 @@ pub enum DkgParticipantError<C: Ciphersuite> {
     /// Invalid secret shares.
     #[error("Invalid secret shares")]
     InvalidSecretShares,
-}
-
-/// Represents all possible errors that can occur in Distributed Key Generation
-/// protocol.
-#[cfg(any(test, feature = "test-impl"))]
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum DkgError<C: Ciphersuite> {
-    /// Error in Distributed Key Generation protocol on dealer side.
-    #[error("DKG dealer error: {0}")]
-    DkgDealer(#[from] DkgDealerError<C>),
-    /// Error in Distributed Key Generation protocol on participant side.
-    #[error("DKG participant error: {0}")]
-    DkgParticipant(#[from] DkgParticipantError<C>),
 }
 
 /// Represents all possible errors for which signer can be marked as malicious.

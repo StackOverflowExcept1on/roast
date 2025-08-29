@@ -1,10 +1,10 @@
-use roast_core::{error::DkgError, tests};
+use roast_core::tests;
 use roast_p256::{error::RoastError, frost::rand_core::OsRng};
 
 #[test]
-fn test_dkg_basic() -> Result<(), DkgError<frost_p256::P256Sha256>> {
+fn test_dkg_basic() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = OsRng;
-    tests::test_dkg_basic::<_, sha2::Sha256, _>(2, 3, &mut rng)?;
+    tests::test_dkg_basic::<frost_p256::P256Sha256, sha2::Sha256, _>(2, 3, &mut rng)?;
     Ok(())
 }
 
