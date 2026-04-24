@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "roast-core",
     "roast-ed25519",
@@ -12,10 +12,10 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 authors = ["StackOverflowExcept1on"]
-edition = "2021"
-rust-version = "1.81"
+edition = "2024"
+rust-version = "1.85"
 readme = "README.md"
 repository = "https://github.com/StackOverflowExcept1on/roast"
 license = "MIT"
@@ -26,14 +26,14 @@ aes = { version = "0.8", features = ["zeroize"], default-features = false }
 ctr = { version = "0.9", features = ["zeroize"], default-features = false }
 digest = { version = "0.10", default-features = false }
 document-features = "0.2"
-frost-core = { version = "2.2", features = ["internals"], default-features = false }
-frost-ed25519 = { version = "2.2", default-features = false }
-frost-ed448 = { version = "2.2", default-features = false }
-frost-p256 = { version = "2.2", default-features = false }
-frost-ristretto255 = { version = "2.2", default-features = false }
-frost-secp256k1 = { version = "2.2", default-features = false }
-frost-secp256k1-evm = { version = "2.2", default-features = false }
-frost-secp256k1-tr = { version = "2.2", default-features = false }
+frost-core = { version = "3.0", features = ["internals"], default-features = false }
+frost-ed25519 = { version = "3.0", default-features = false }
+frost-ed448 = { version = "3.0", default-features = false }
+frost-p256 = { version = "3.0", default-features = false }
+frost-ristretto255 = { version = "3.0", default-features = false }
+frost-secp256k1 = { version = "3.0", default-features = false }
+frost-secp256k1-evm = { version = "3.0", default-features = false }
+frost-secp256k1-tr = { version = "3.0", default-features = false }
 hkdf = { version = "0.12", default-features = false }
 rand = { version = "0.8", default-features = false }
 rand_core = { version = "0.6", default-features = false }

@@ -23,7 +23,7 @@ rand_core.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["serialization", "cheater-detection"]
+default = ["serialization"]
 #! ## Features
 ## Enable `serde` support for types that need to be communicated. You
 ## can use `serde` to serialize structs with any encoder that supports
@@ -33,5 +33,3 @@ serde = ["frost-core/serde"]
 serialization = ["serde", "frost-core/serialization"]
 ## Exposes ciphersuite-generic tests for other crates to use.
 test-impl = ["dep:rand"]
-## Enable cheater detection.
-cheater-detection = ["frost-core/cheater-detection"]

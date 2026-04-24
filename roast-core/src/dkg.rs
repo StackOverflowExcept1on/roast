@@ -1,7 +1,7 @@
 //! Distributed Key Generation types.
 
 use crate::error::{DkgDealerError, DkgParticipantError, FrostError};
-use aes::cipher::{crypto_common::BlockSizeUser, KeyIvInit, StreamCipher};
+use aes::cipher::{KeyIvInit, StreamCipher, crypto_common::BlockSizeUser};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
@@ -9,21 +9,20 @@ use alloc::{
 use core::{iter, marker::PhantomData};
 use digest::Digest;
 use frost_core::{
-    keys::{
-        self,
-        dkg::{self, round1, round2},
-        KeyPackage, PublicKeyPackage, SecretShare, SigningShare,
-    },
     Ciphersuite, Field, Group, Identifier, SigningKey, VerifyingKey,
+    keys::{
+        self, KeyPackage, PublicKeyPackage, SecretShare, SigningShare,
+        dkg::{self, round1, round2},
+    },
 };
-use hkdf::{hmac::SimpleHmac, Hkdf};
+use hkdf::{Hkdf, hmac::SimpleHmac};
 use rand_core::{CryptoRng, RngCore};
 
 fn diffie_hellman<C: Ciphersuite>(
     secret_key: &SigningKey<C>,
     public_key: &VerifyingKey<C>,
 ) -> Option<<C::Group as Group>::Serialization> {
-    let shared_secret = public_key.to_element() * secret_key.to_scalar();
+    let shared_secret = public_key.to_element() * secret_key.clone().to_scalar();
     let shared_secret_bytes = <C::Group as Group>::serialize(&shared_secret).ok()?;
 
     Some(shared_secret_bytes)
@@ -54,37 +53,38 @@ fn try_apply_keystream(key: [u8; 16], iv: [u8; 16], buffer: &mut [u8]) -> Option
         .ok()
 }
 
+type Round2PackageSerialization<C> =
+    <<<C as Ciphersuite>::Group as Group>::Field as Field>::Serialization;
+
 fn encrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
     round2_package: round2::Package<C>,
     receiver_temp_public_key: &VerifyingKey<C>,
     sender_temp_secret_key: &SigningKey<C>,
-) -> Option<Vec<u8>> {
+) -> Option<Round2PackageSerialization<C>> {
     let shared_secret_bytes = diffie_hellman(sender_temp_secret_key, receiver_temp_public_key)?;
     let (key, iv) = hkdf::<C, H>(shared_secret_bytes)?;
 
     let signing_share = round2_package.signing_share().to_scalar();
-    let singing_share_bytes = <<C::Group as Group>::Field as Field>::serialize(&signing_share);
+    let mut singing_share_bytes = <<C::Group as Group>::Field as Field>::serialize(&signing_share);
 
-    let mut buffer = singing_share_bytes.as_ref().to_vec();
-    try_apply_keystream(key, iv, &mut buffer)?;
+    try_apply_keystream(key, iv, singing_share_bytes.as_mut())?;
 
-    Some(buffer)
+    Some(singing_share_bytes)
 }
 
 fn decrypt_round2_package<C: Ciphersuite, H: Clone + BlockSizeUser + Digest>(
-    round2_package_encrypted: Vec<u8>,
+    mut round2_package_encrypted: Round2PackageSerialization<C>,
     sender_temp_public_key: &VerifyingKey<C>,
     receiver_temp_secret_key: &SigningKey<C>,
 ) -> Option<round2::Package<C>> {
     let shared_secret_bytes = diffie_hellman(receiver_temp_secret_key, sender_temp_public_key)?;
     let (key, iv) = hkdf::<C, H>(shared_secret_bytes)?;
 
-    let mut buffer = round2_package_encrypted;
-    try_apply_keystream(key, iv, &mut buffer)?;
+    try_apply_keystream(key, iv, round2_package_encrypted.as_mut())?;
 
-    let buffer_serialized = buffer.try_into().ok()?;
-    let signing_share =
-        SigningShare::new(<<C::Group as Group>::Field>::deserialize(&buffer_serialized).ok()?);
+    let signing_share = SigningShare::new(
+        <<C::Group as Group>::Field>::deserialize(&round2_package_encrypted).ok()?,
+    );
 
     Some(round2::Package::new(signing_share))
 }
@@ -112,7 +112,8 @@ pub struct Dealer<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> {
     participants: Vec<Identifier<C>>,
     participants_set: BTreeSet<Identifier<C>>,
     round1_packages: BTreeMap<Identifier<C>, Round1Package<C>>,
-    round2_packages_encrypted: BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, Vec<u8>>>,
+    round2_packages_encrypted:
+        BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, Round2PackageSerialization<C>>>,
     round2_participants_set: BTreeSet<Identifier<C>>,
     round2_culprits_set: BTreeSet<Identifier<C>>,
     phantom: PhantomData<H>,
@@ -169,7 +170,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
     pub fn round2_packages_encrypted(
         &self,
         receiver_identifier: Identifier<C>,
-    ) -> Option<&BTreeMap<Identifier<C>, Vec<u8>>> {
+    ) -> Option<&BTreeMap<Identifier<C>, Round2PackageSerialization<C>>> {
         self.round2_packages_encrypted.get(&receiver_identifier)
     }
 
@@ -220,7 +221,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
     pub fn receive_round2_packages_encrypted(
         &mut self,
         identifier: Identifier<C>,
-        round2_packages_encrypted: BTreeMap<Identifier<C>, Vec<u8>>,
+        round2_packages_encrypted: BTreeMap<Identifier<C>, Round2PackageSerialization<C>>,
     ) -> Result<DkgStatus, DkgDealerError<C>> {
         if !self.participants_set.contains(&identifier) {
             return Err(DkgDealerError::UnknownParticipant);
@@ -230,25 +231,11 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Dealer<C, H> {
             return Err(DkgDealerError::Frost(FrostError::IncorrectNumberOfPackages));
         }
 
-        let zero = <<C::Group as Group>::Field>::zero();
-        let serialization = <<C::Group as Group>::Field>::serialize(&zero);
-        let expected_len = serialization.as_ref().len();
-
-        // check that `round2_packages_encrypted` keys contain all identifiers except
-        // sender identifier
         if self
             .participants
             .iter()
             .filter(|id| identifier.ne(id))
-            .any(|id| {
-                // value must be `Some(_)` and must also have length of `expected_len`
-                round2_packages_encrypted
-                    .get(id)
-                    .filter(|round2_package_encrypted| {
-                        round2_package_encrypted.len() == expected_len
-                    })
-                    .is_none()
-            })
+            .any(|id| !round2_packages_encrypted.contains_key(id))
         {
             return Err(DkgDealerError::Frost(FrostError::IncorrectPackage));
         }
@@ -445,7 +432,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
 
     /// Returns the temporary secret key.
     pub fn temp_secret_key(&self) -> SigningKey<C> {
-        self.temp_secret_key
+        self.temp_secret_key.clone()
     }
 
     /// Returns tuple of [`round1::Package<C>`] and [`VerifyingKey<C>`].
@@ -461,7 +448,8 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
     pub fn receive_round1_packages(
         &mut self,
         mut round1_packages: BTreeMap<Identifier<C>, Round1Package<C>>,
-    ) -> Result<BTreeMap<Identifier<C>, Vec<u8>>, DkgParticipantError<C>> {
+    ) -> Result<BTreeMap<Identifier<C>, Round2PackageSerialization<C>>, DkgParticipantError<C>>
+    {
         let round1_secret_package = self
             .round1_secret_package
             .take()
@@ -501,7 +489,7 @@ impl<C: Ciphersuite, H: Clone + BlockSizeUser + Digest> Participant<C, H> {
     /// Receives `round2_packages_encrypted` from the dealer.
     pub fn receive_round2_packages_encrypted(
         &mut self,
-        round2_packages_encrypted: BTreeMap<Identifier<C>, Vec<u8>>,
+        round2_packages_encrypted: BTreeMap<Identifier<C>, Round2PackageSerialization<C>>,
     ) -> Result<(KeyPackage<C>, PublicKeyPackage<C>), DkgParticipantError<C>> {
         let round2_secret_package = self
             .round2_secret_package

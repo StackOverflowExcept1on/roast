@@ -1,20 +1,20 @@
 //! Test cases.
 
 use crate::{
+    Coordinator, SessionStatus, Signer,
     dkg::{Dealer, Participant},
     error::{DkgParticipantError, RoastError},
-    Coordinator, SessionStatus, Signer,
 };
 use aes::cipher::crypto_common::BlockSizeUser;
 use alloc::{boxed::Box, collections::BTreeMap};
 use core::error::Error;
 use digest::Digest;
 use frost_core::{
+    Ciphersuite, Field, Group,
     keys::{self, IdentifierList, KeyPackage},
     round2::SignatureShare,
-    Ciphersuite, Field, Group,
 };
-use rand::{seq::SliceRandom, CryptoRng, RngCore};
+use rand::{CryptoRng, RngCore, seq::SliceRandom};
 
 /// Runs DKG algorithm with `min_signers`/`max_signers` and no malicious
 /// participants.

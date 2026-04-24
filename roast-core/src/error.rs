@@ -8,7 +8,7 @@ pub type FrostError<C> = FrostErrorType<C>;
 
 /// Represents all possible errors that can occur in Distributed Key Generation
 /// protocol on dealer side.
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum DkgDealerError<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
@@ -32,7 +32,7 @@ pub enum DkgDealerError<C: Ciphersuite> {
 
 /// Represents all possible errors that can occur in Distributed Key Generation
 /// protocol on participant side.
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum DkgParticipantError<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
@@ -57,7 +57,7 @@ pub enum MaliciousSignerError {
 }
 
 /// Represents all possible errors that can occur in ROAST protocol.
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum RoastError<C: Ciphersuite> {
     /// Error in FROST protocol.
     #[error("FROST error: {0}")]
