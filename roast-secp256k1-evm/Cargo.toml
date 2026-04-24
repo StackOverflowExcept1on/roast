@@ -28,5 +28,8 @@ default = ["serialization"]
 ## can use `serde` to serialize structs with any encoder that supports
 ## `serde` (e.g. JSON with `serde_json`).
 serde = ["roast-core/serde"]
-## Enable a default serialization format. Enables `serde`.
-serialization = ["serde", "roast-core/serialization"]
+## Enable `parity-scale-codec` and `scale-info` support for types
+## that need to be communicated.
+codec = ["roast-core/codec"]
+## Enable a default serialization format. Enables `serde` and `codec`.
+serialization = ["serde", "codec", "roast-core/serialization"]

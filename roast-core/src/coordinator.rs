@@ -10,10 +10,16 @@ use frost_core::{
     round1::SigningCommitments,
     round2::SignatureShare,
 };
+#[cfg(all(feature = "serialization", feature = "codec"))]
+use scale_info::{
+    TypeInfo,
+    scale::{self, Decode, Encode},
+};
 
 type SessionId = u16;
 
 #[derive(Debug)]
+#[cfg_attr(all(feature = "serialization", feature = "codec"), derive(Encode, Decode, TypeInfo), codec(crate = scale))] //TODO: fix TypeInfo
 struct Session<C: Ciphersuite> {
     signing_package: SigningPackage<C>,
     signature_shares: BTreeMap<Identifier<C>, SignatureShare<C>>,
@@ -21,6 +27,7 @@ struct Session<C: Ciphersuite> {
 
 /// Represents all possible session statuses.
 #[derive(Debug)]
+#[cfg_attr(all(feature = "serialization", feature = "codec"), derive(Encode, Decode, TypeInfo), codec(crate = scale))] //TODO: fix TypeInfo
 pub enum SessionStatus<C: Ciphersuite> {
     /// Session still in progress.
     InProgress,
@@ -41,6 +48,7 @@ pub enum SessionStatus<C: Ciphersuite> {
 
 /// Represents coordinator.
 #[derive(Debug)]
+#[cfg_attr(all(feature = "serialization", feature = "codec"), derive(Encode, Decode, TypeInfo), codec(crate = scale))] //TODO: fix TypeInfo
 pub struct Coordinator<C: Ciphersuite> {
     max_signers: u16,
     min_signers: u16,

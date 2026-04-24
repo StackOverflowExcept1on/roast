@@ -1,6 +1,11 @@
 //! Error types.
 
 use frost_core::{Ciphersuite, Error as FrostErrorType};
+#[cfg(all(feature = "serialization", feature = "codec"))]
+use scale_info::{
+    TypeInfo,
+    scale::{self, Decode, Encode},
+};
 use thiserror::Error;
 
 /// Represents all possible errors that can occur in FROST protocol.
@@ -47,6 +52,7 @@ pub enum DkgParticipantError<C: Ciphersuite> {
 
 /// Represents all possible errors for which signer can be marked as malicious.
 #[derive(Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(all(feature = "serialization", feature = "codec"), derive(Encode, Decode, TypeInfo), codec(crate = scale))]
 pub enum MaliciousSignerError {
     /// Signer unsolicitedly replied to coordinator.
     #[error("Unsolicited reply")]
